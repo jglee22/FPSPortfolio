@@ -10742,7 +10742,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controller: {fileID: 865808390}
+  crouchSpeed: 3
   speed: 5
+  sprintSpeed: 10
   gravity: -9.8
   mouseSensitivity: 500
   playerCamera: {fileID: 1791591022}

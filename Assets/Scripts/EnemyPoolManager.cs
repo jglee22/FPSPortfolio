@@ -15,6 +15,10 @@ public class EnemyPoolManager : MonoBehaviour
     public EnemyType[] enemyTypes;     // 적 종류 배열
     public Transform[] spawnPoints;    // 스폰 위치 배열
 
+    public int waveNumber = 1;
+    public int enemiesPerWave = 5;
+    private int enemiesSpawned = 0;
+
     private Dictionary<string, Queue<GameObject>> enemyPools; // 적 풀 관리 딕셔너리
 
     void Start()
@@ -34,7 +38,7 @@ public class EnemyPoolManager : MonoBehaviour
             }
             enemyPools[enemyType.name] = pool; // 딕셔너리에 추가
         }
-
+        SpawnWave();
         // 주기적 스폰 테스트
         InvokeRepeating("SpawnEnemy", 1f, 1f); // 1초 후 시작, 1초 간격
     }
@@ -62,6 +66,17 @@ public class EnemyPoolManager : MonoBehaviour
                 enemyAI.TakeDamage(0); // 체력 초기화 (또는 별도 초기화 메서드 호출)
             }
         }
+    }
+    void SpawnWave()
+    {
+        for (int i = 0; i < enemiesPerWave; i++)
+        {
+            SpawnEnemy();
+            enemiesSpawned++;
+        }
+
+        waveNumber++;
+        enemiesPerWave += 2; // 웨이브마다 적 증가
     }
 
     // 풀로 반환

@@ -412,6 +412,37 @@ Transform:
   m_Father: {fileID: 3135610056937545490}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2437810352601519574
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4945193143705074182}
+  m_Layer: 0
+  m_Name: RightAttackPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4945193143705074182
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2437810352601519574}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.123, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1155825635249726181}
+  m_RootOrder: 5
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2476297564529094802
 GameObject:
   m_ObjectHideFlags: 0
@@ -540,8 +571,40 @@ Transform:
   - {fileID: 9135935201789908350}
   - {fileID: 152681825683318253}
   - {fileID: 6108247983027447341}
+  - {fileID: 4945193143705074182}
   m_Father: {fileID: 7686228968629508592}
   m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3386729831387688579
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6378098023324308528}
+  m_Layer: 0
+  m_Name: LeftAttackPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6378098023324308528
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3386729831387688579}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.118, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5634246410014866941}
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3463645230408496800
 GameObject:
@@ -812,7 +875,7 @@ GameObject:
   - component: {fileID: -7953357973114243641}
   m_Layer: 0
   m_Name: Zombie3
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -867,12 +930,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: baac99be1f6556b40b6fa7cc4a2b4b34, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  agent: {fileID: -378899208513864728}
   player: {fileID: 0}
-  animator: {fileID: 3568628872616989892}
   attackRange: 2
+  moveSpeed: 3.5
   health: 50
-  damage: 10
+  leftAttackPoint: {fileID: 6378098023324308528}
+  rightAttackPoint: {fileID: 4945193143705074182}
+  attackRadius: 0.1
+  playerLayer:
+    serializedVersion: 2
+    m_Bits: 1
+  attackDamage: 10
+  viewAngle: 60
+  viewDistance: 10
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 0
+  enemyType: 
 --- !u!195 &-378899208513864728
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1349,6 +1423,7 @@ Transform:
   - {fileID: 1406543897577142609}
   - {fileID: 4455442316413075733}
   - {fileID: 4699226097055364507}
+  - {fileID: 6378098023324308528}
   m_Father: {fileID: 5451498026538668516}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

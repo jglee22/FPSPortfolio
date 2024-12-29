@@ -3,36 +3,52 @@ using System.Collections.Generic;
 using UnityEditor.EditorTools;
 using UnityEngine;
 using UnityEngine.AI;
-using static EnemyPoolManager;
+
+
 public class EnemyAI : MonoBehaviour
 {
+    // 플레이어 및 기본 설정
     public Transform player; // 플레이어 위치
+    private PlayerHealth playerHealth; // 플레이어 체력 관리
     public float attackRange = 2.0f; // 공격 범위
     public float moveSpeed = 3.5f;  // 이동 속도
     public int health = 100;        // 체력
+
+    // 공격 설정
+    public Transform leftAttackPoint;   // 왼손 공격 지점
+    public Transform rightAttackPoint;  // 오른손 공격 지점
+    public float attackRadius = 1.5f;   // 공격 반경
+    public LayerMask playerLayer;       // 플레이어 레이어 설정
+    public int attackDamage = 10;       // 공격 데미지
 
     public float viewAngle = 60f; // 시야각(도 단위)
     public float viewDistance = 10f; // 시야 거리
     public LayerMask obstacleMask; // 장애물 레이어
 
+    // 상태 관리
     private NavMeshAgent agent;
     private Animator animator;
     private bool isAttacking = false;
     private bool isDead = false;
     private bool isRotatingAfterAttack = false;
+
+    // 플레이어 상태 추가
+    private bool isPlayerDead = false; // 플레이어 사망 여부
+
     // 추가: 적 타입 및 풀 매니저 참조
     private EnemyPoolManager poolManager;
+    public string enemyType; // EnemyPoolManager에 정의된 타입 이름
 
+    // 회전 관련 변수
     private Vector3 targetPosition; // 공격 시 고정할 플레이어 위치
     private Quaternion lookRotation; // 공격 방향 고정 회전 값
-
-    public string enemyType; // EnemyPoolManager에 정의된 타입 이름
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
         player = FindObjectOfType<PlayerMovement>().transform;
+        playerHealth = player.GetComponent<PlayerHealth>();
         agent.speed = moveSpeed;
 
         // 풀 매니저 참조
@@ -45,6 +61,22 @@ public class EnemyAI : MonoBehaviour
 
         float distance = Vector3.Distance(transform.position, player.position);
 
+        // **플레이어 사망 상태 체크**
+        if (playerHealth.currentHealth <= 0)
+        {
+            isPlayerDead = true; // 플레이어 사망 처리
+        }
+
+        // 플레이어가 죽었으면 동작 멈춤
+        if (isDead || isPlayerDead) // 적 또는 플레이어 사망 시
+        {
+            agent.isStopped = true;
+            animator.SetBool("isMoving", false);
+            animator.SetBool("isAttacking", false);
+            if(!animator.GetBool("isIdle"))
+            animator.SetBool("isIdle", true);
+            return;
+        }
         // 공격 도중에는 회전 고정, 상태 전환 차단
         if (isAttacking)
         {
@@ -62,7 +94,7 @@ public class EnemyAI : MonoBehaviour
         // 체력 체크
         if (health <= 0)
         {
-            Die();
+            EnemyDie();
             return;
         }
 
@@ -145,7 +177,33 @@ public class EnemyAI : MonoBehaviour
             isRotatingAfterAttack = false; // 회전 종료
         }
     }
+    // 공격 판정 (애니메이션 이벤트에서 호출)
+    public void HitCheckLeft()
+    {
+        CheckHit(leftAttackPoint); // 왼손 타격
+        Debug.Log($"enemy left attack");
+    }
 
+    public void HitCheckRight()
+    {
+        CheckHit(rightAttackPoint); // 오른손 타격
+        Debug.Log($"enemy right attack");
+    }
+
+    void CheckHit(Transform attackPoint)
+    {
+        Collider[] hitPlayers = Physics.OverlapSphere(attackPoint.position, attackRadius, playerLayer);
+        foreach (Collider player in hitPlayers)
+        {
+            Debug.Log($"player : {player}");
+            PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
+            if (playerHealth != null)
+            {   
+                playerHealth.TakeDamage(attackDamage); // 데미지 적용
+                Debug.Log("플레이어 피격!");
+            }
+        }
+    }
     // 부드러운 회전 처리
     IEnumerator SmoothRotate(Quaternion targetRotation)
     {
@@ -171,7 +229,7 @@ public class EnemyAI : MonoBehaviour
     }
 
     // 사망 처리
-    void Die()
+    void EnemyDie()
     {
         if (isDead) return;
 
@@ -209,8 +267,25 @@ public class EnemyAI : MonoBehaviour
         animator.SetBool("isAttacking", false);
     }
 
-    public void TakeDamage(int damage)
+    public void EnemyTakeDamage(int damage)
     {
+        if(isDead) return;
         health -= damage;
+        Debug.Log($"Enemy HP : {health}");
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (leftAttackPoint != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(leftAttackPoint.position, attackRadius);
+        }
+
+        if (rightAttackPoint != null)
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireSphere(rightAttackPoint.position, attackRadius);
+        }
     }
 }

@@ -11,27 +11,58 @@ public class PlayerMovement : MonoBehaviour
     public float gravity = -9.8f;
     public float mouseSensitivity = 100f;
 
+    public float jumpHeight = 3f;  // 점프 높이
+    private Vector3 velocity;      // 캐릭터의 속도
+    public bool isGrounded;        // 바닥에 닿아 있는지 여부
+
+    public Transform groundCheck; // 바닥 체크 위치
+    public float groundDistance = 0.4f; // 체크 반경
+    public LayerMask groundMask; // 바닥으로 인식할 레이어
+
     public Transform playerCamera;
 
     float xRotation = 0f;
-    Vector3 velocity;
     private bool isCrouching = false;
+
+    private PlayerHealth playerHealth;
 
     void Start()
     {
+        playerHealth = GetComponent<PlayerHealth>();
         Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
     }
 
     void Update()
     {
+        if (playerHealth != null)
+        {
+            if (playerHealth.isPlayerDie)
+                return;
+        }
+
+        isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
+        if (isGrounded && velocity.y < 0)
+        {
+            velocity.y = -2f; // 약간의 중력 유지
+        }
+
+        if (Input.GetButtonDown("Jump") && isGrounded) // 점프 키(스페이스바)
+        {
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        }
+
         // 마우스 회전
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
         float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : speed;
 
+        // X축 회전 누적값 조절 및 제한
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+
         playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
 

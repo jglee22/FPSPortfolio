@@ -63,7 +63,7 @@ public class EnemyPoolManager : MonoBehaviour
             if (enemyAI != null)
             {
                 enemyAI.enemyType = selectedEnemy.name; // 타입 지정
-                enemyAI.TakeDamage(0); // 체력 초기화 (또는 별도 초기화 메서드 호출)
+                enemyAI.EnemyTakeDamage(0); // 체력 초기화 (또는 별도 초기화 메서드 호출)
             }
         }
     }

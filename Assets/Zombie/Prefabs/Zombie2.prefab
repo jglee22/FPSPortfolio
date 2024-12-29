@@ -33,6 +33,7 @@ Transform:
   - {fileID: 5375350009534076936}
   - {fileID: 7262319715886063692}
   - {fileID: 1741513578055537858}
+  - {fileID: 3701915470711678518}
   m_Father: {fileID: 1349818687978959037}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -98,6 +99,37 @@ Transform:
   - {fileID: 99245777284494869}
   m_Father: {fileID: 5266477254948832188}
   m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &719446708697852510
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7498493386706817259}
+  m_Layer: 0
+  m_Name: RightAttackPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7498493386706817259
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 719446708697852510}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.115, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5266477254948832188}
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &721803340155957115
 GameObject:
@@ -432,7 +464,7 @@ GameObject:
   - component: {fileID: -8637915286033500562}
   m_Layer: 0
   m_Name: Zombie2
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -488,11 +520,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: baac99be1f6556b40b6fa7cc4a2b4b34, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  agent: {fileID: -7878785858865131359}
   player: {fileID: 0}
-  animator: {fileID: 7537417665459280382}
   attackRange: 2
+  moveSpeed: 3.5
   health: 50
+  leftAttackPoint: {fileID: 3701915470711678518}
+  rightAttackPoint: {fileID: 7498493386706817259}
+  attackRadius: 0.1
+  playerLayer:
+    serializedVersion: 2
+    m_Bits: 1
+  attackDamage: 10
+  viewAngle: 60
+  viewDistance: 10
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 0
+  enemyType: 
 --- !u!195 &-7878785858865131359
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1247,6 +1291,37 @@ Transform:
   - {fileID: 8259589451653086795}
   m_Father: {fileID: 7968327870224497133}
   m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5156297132419023097
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3701915470711678518}
+  m_Layer: 0
+  m_Name: LeftAttackPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3701915470711678518
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5156297132419023097}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.127, y: -0, z: -0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1669926310329932964}
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5315677001553350782
 GameObject:
@@ -2049,6 +2124,7 @@ Transform:
   - {fileID: 2870275976121775143}
   - {fileID: 6557935038975755444}
   - {fileID: 997762061161662324}
+  - {fileID: 7498493386706817259}
   m_Father: {fileID: 3726413018477983913}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

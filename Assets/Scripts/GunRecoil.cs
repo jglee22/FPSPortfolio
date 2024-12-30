@@ -18,7 +18,11 @@ public class GunRecoil : MonoBehaviour
         // 반동 회복 처리
         targetRotation = Vector3.Lerp(targetRotation, Vector3.zero, recoilSpeed * Time.deltaTime);
         currentRotation = Vector3.Slerp(currentRotation, targetRotation, recoilSpeed * Time.deltaTime);
-        cameraTransform.localRotation = Quaternion.Euler(currentRotation);
+
+        // 기존 회전값에 반동 추가
+        Quaternion originalRotation = cameraTransform.localRotation; // 기존 회전값 저장
+        Quaternion recoilRotation = Quaternion.Euler(currentRotation); // 반동 회전값 생성
+        cameraTransform.localRotation = originalRotation * recoilRotation; // 기존 회전에 반동값 곱하기
     }
 
     public void ApplyRecoil()

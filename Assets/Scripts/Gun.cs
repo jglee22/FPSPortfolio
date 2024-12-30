@@ -3,9 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+
+// 무기 타입 정의
+public enum GunType
+{
+    AssaultRifle,
+    Shotgun,
+    SniperRifle,
+    Pistol
+}
+
 public class Gun : MonoBehaviour
 {
-   // 탄약 및 재장전 설정
+    // 무기 타입 설정
+    public GunType gunType; // 무기 타입 선택
+
+    // 탄약 및 재장전 설정
     public int maxAmmo = 30;
     public int currentAmmo;
     public float reloadTime = 2f;
@@ -19,6 +32,14 @@ public class Gun : MonoBehaviour
     // 사격 관련 설정
     public float range = 100f;
     public int damage = 10;
+
+    // 샷건 전용 변수
+    public int pellets = 1;              // 샷건 탄환 개수
+    public float spreadAngle = 0f;       // 샷건 확산 각도
+    private bool isShotgunCooldown = false; // 샷건 쿨다운 상태
+    public float shotgunCooldownTime = 1.0f; // 샷건 딜레이 시간
+
+
 
     // 총구 위치와 카메라 설정
     public Transform gunBarrel;      // 총구 위치
@@ -45,6 +66,9 @@ public class Gun : MonoBehaviour
 
     void Start()
     {
+        // 무기 타입별 설정 적용
+        ApplyGunSettings();
+
         // 초기 설정
         currentAmmo = maxAmmo;
         gunRecoil = FindObjectOfType<GunRecoil>();
@@ -53,14 +77,15 @@ public class Gun : MonoBehaviour
     }
 
     void Update()
-    {
+    {  
         // 재장전 중이면 조작 금지
         if (isReloading) return;
 
-            UpdateUI(); // UI 업데이트
+        UpdateUI(); // UI 업데이트
         // 발사 모드 전환 (B 키)
         if (Input.GetKeyDown(KeyCode.B))
         {
+            if(gunType != GunType.AssaultRifle)
             isAutoFire = !isAutoFire;
         }
 
@@ -74,7 +99,13 @@ public class Gun : MonoBehaviour
         // 단발 모드
         if (!isAutoFire && Input.GetButtonDown("Fire1") && currentAmmo > 0)
         {
+            if (gunType == GunType.Shotgun && isShotgunCooldown) return; // 샷건 쿨다운 체크
             Shoot();
+
+            if (gunType == GunType.Shotgun) // 샷건일 경우 쿨다운 시작
+            {
+                StartCoroutine(ShotgunCooldown());
+            }
         }
         // 연사 모드
         else if (isAutoFire && Input.GetButton("Fire1") && currentAmmo > 0 && Time.time >= nextTimeToFire)
@@ -85,6 +116,51 @@ public class Gun : MonoBehaviour
 
         // 크로스헤어 업데이트
         UpdateCrosshair();
+    }
+
+    // 무기 타입별 설정 적용
+    void ApplyGunSettings()
+    {
+        switch (gunType)
+        {
+            case GunType.AssaultRifle:
+                maxAmmo = 30;
+                reloadTime = 2f;
+                fireRate = 0.1f;
+                isAutoFire = true;
+                damage = 10;
+                recoilSpread = 10f;
+                break;
+
+            case GunType.Shotgun:
+                maxAmmo = 8;
+                reloadTime = 3f;
+                fireRate = 1f;
+                isAutoFire = false;
+                damage = 15;
+                recoilSpread = 20f;
+                pellets = 8;
+                spreadAngle = 10f;
+                break;
+
+            case GunType.SniperRifle:
+                maxAmmo = 5;
+                reloadTime = 2.5f;
+                fireRate = 1.5f;
+                isAutoFire = false;
+                damage = 50;
+                recoilSpread = 25f;
+                break;
+
+            case GunType.Pistol:
+                maxAmmo = 15;
+                reloadTime = 1.5f;
+                fireRate = 0.3f;
+                isAutoFire = false;
+                damage = 8;
+                recoilSpread = 5f;
+                break;
+        }
     }
 
     // UI 업데이트
@@ -106,7 +182,7 @@ public class Gun : MonoBehaviour
             if (hit.collider != null)
             {
                 if (hit.transform.CompareTag("Enemy"))
-                    crosshairImage.color = targetColor; // 적 조준 시 색상 변경
+                    crosshairImage.color = targetColor;
                 else
                     crosshairImage.color = normalColor;
             }
@@ -115,52 +191,69 @@ public class Gun : MonoBehaviour
         {
             crosshairImage.color = normalColor;
         }
-
-        // 반동에 따른 크로스헤어 크기 조절
-        currentSpread = Mathf.Lerp(currentSpread, 0f, Time.deltaTime * 10f);
-        crosshairImage.rectTransform.sizeDelta = new Vector2(50 + currentSpread, 50 + currentSpread);
     }
 
     // 발사 기능
     void Shoot()
     {
-        if (currentAmmo > 0 && !isReloading)
+        ApplyRecoil();
+        if (gunAudioSource != null)
         {
-            // 이펙트 및 소리
-            if(muzzleFlash != null)
-            muzzleFlash?.Play();
-            gunAudioSource.PlayOneShot(gunShotSound);
-
-            // 탄약 감소
-            currentAmmo--;
-            ApplyRecoil();
-
-            // 발사 방향 계산 (카메라 기준 → 총구 위치 보정)
-            Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-            Vector3 targetPoint = ray.GetPoint(range);
-            Vector3 direction = (targetPoint - gunBarrel.position).normalized;
-
-            RaycastHit hit;
-            if (Physics.Raycast(gunBarrel.position, direction, out hit, range))
+            if (gunShotSound != null)
             {
-                Debug.Log(hit.transform.name); // 맞춘 오브젝트 로그 출력
+                gunAudioSource.clip = gunShotSound;
+                gunAudioSource.Play();
+            }
+        }
+        currentAmmo--;
+        if (gunType == GunType.Shotgun)
+        {
+            for (int i = 0; i < pellets; i++)
+            {
+                FirePellet();
+            }
+        }
+        else
+        {
+            FireSingleShot();
+        }
+    }
 
-                // 적 타격 처리
-                EnemyAI target = hit.transform.GetComponent<EnemyAI>();
-                if (target != null)
-                {
-                    target.EnemyTakeDamage(damage);
-                }
+    void FireSingleShot()
+    {
+        Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        if (Physics.Raycast(ray, out RaycastHit hit, range))
+        {
+            EnemyAI target = hit.transform.GetComponent<EnemyAI>();
+            if (target != null)
+            {
+                target.EnemyTakeDamage(damage);
             }
         }
     }
 
+    void FirePellet()
+    {
+        Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        Vector3 shootDirection = ray.direction;
+        shootDirection.x += Random.Range(-spreadAngle, spreadAngle) / 100f;
+        shootDirection.y += Random.Range(-spreadAngle, spreadAngle) / 100f;
+
+        if (Physics.Raycast(fpsCamera.transform.position, shootDirection, out RaycastHit hit, range))
+        {
+            EnemyAI target = hit.transform.GetComponent<EnemyAI>();
+            if (target != null)
+            {
+                target.EnemyTakeDamage(damage);
+            }
+        }
+    }
     // 반동 적용
     void ApplyRecoil()
     {
         gunRecoil.ApplyRecoil();
         weaponRecoil.ApplyRecoil();
-        currentSpread += recoilSpread; // 반동 시 크로스헤어 확장
+        currentSpread += recoilSpread;
     }
 
     // 재장전 기능
@@ -176,5 +269,11 @@ public class Gun : MonoBehaviour
         currentAmmo = maxAmmo;
         isReloading = false;
         UpdateUI();
+    }
+    IEnumerator ShotgunCooldown()
+    {
+        isShotgunCooldown = true; // 쿨다운 시작
+        yield return new WaitForSeconds(shotgunCooldownTime); // 딜레이 적용
+        isShotgunCooldown = false; // 쿨다운 해제
     }
 }

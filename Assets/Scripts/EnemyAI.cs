@@ -43,6 +43,10 @@ public class EnemyAI : MonoBehaviour
     private Vector3 targetPosition; // 공격 시 고정할 플레이어 위치
     private Quaternion lookRotation; // 공격 방향 고정 회전 값
 
+
+    public event System.Action OnDeath; // 사망 이벤트
+
+
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -240,8 +244,10 @@ public class EnemyAI : MonoBehaviour
         animator.SetBool("isAttacking", false);
         animator.SetBool("isDead", true);
 
-        // 사망 애니메이션 재생 후 풀로 반환
         StartCoroutine(ReturnToPoolAfterDeath());
+
+        // 이벤트 호출
+        OnDeath?.Invoke();
     }
 
     IEnumerator ReturnToPoolAfterDeath()
@@ -259,7 +265,7 @@ public class EnemyAI : MonoBehaviour
     void ResetEnemy()
     {
         isDead = false;
-        health = 100; // 체력 초기화
+        health = 50; // 체력 초기화
 
         agent.isStopped = false;
         animator.SetBool("isDead", false);
@@ -288,4 +294,6 @@ public class EnemyAI : MonoBehaviour
             Gizmos.DrawWireSphere(rightAttackPoint.position, attackRadius);
         }
     }
+
+ 
 }

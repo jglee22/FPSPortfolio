@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using TMPro;
 public class EnemyPoolManager : MonoBehaviour
 {
     [System.Serializable] // 적 종류별 데이터 관리
@@ -12,6 +12,7 @@ public class EnemyPoolManager : MonoBehaviour
         public int poolSize = 10;      // 초기 풀 크기
     }
 
+    public Transform enemyContainer;
     public EnemyType[] enemyTypes;     // 적 종류 배열
     public Transform[] spawnPoints;    // 스폰 위치 배열
 
@@ -19,28 +20,64 @@ public class EnemyPoolManager : MonoBehaviour
     public int enemiesPerWave = 5;
     private int enemiesSpawned = 0;
 
+
+    public TextMeshProUGUI waveText;        // 웨이브 상태 표시 UI
+    public float waveDelay = 5f; // 웨이브 간 대기 시간
+    private bool isWaveActive = false; // 웨이브 진행 여부 확인
+    private int enemiesAlive = 0; // 현재 살아있는 적 수
+
     private Dictionary<string, Queue<GameObject>> enemyPools; // 적 풀 관리 딕셔너리
+
 
     void Start()
     {
-        // 딕셔너리 초기화
+        // 초기화
         enemyPools = new Dictionary<string, Queue<GameObject>>();
 
-        // 적 종류별 풀 생성
         foreach (EnemyType enemyType in enemyTypes)
         {
             Queue<GameObject> pool = new Queue<GameObject>();
             for (int i = 0; i < enemyType.poolSize; i++)
             {
                 GameObject enemy = Instantiate(enemyType.prefab);
-                enemy.SetActive(false); // 초기에는 비활성화
+                enemy.SetActive(false);
                 pool.Enqueue(enemy);
             }
-            enemyPools[enemyType.name] = pool; // 딕셔너리에 추가
+            enemyPools[enemyType.name] = pool;
         }
-        SpawnWave();
-        // 주기적 스폰 테스트
-        InvokeRepeating("SpawnEnemy", 1f, 1f); // 1초 후 시작, 1초 간격
+        SpawnWave();         // 웨이브 시작
+        UpdateWaveUI();      // UI 업데이트
+        isWaveActive = true; // 웨이브 활성화 추가
+    }
+    void Update()
+    {
+        // 적이 모두 처치되었고, 웨이브가 활성 상태이면 다음 웨이브 시작
+        if (isWaveActive && enemiesAlive <= 0)
+        {
+            StartCoroutine(StartNextWave());
+        }
+    }
+
+    IEnumerator StartNextWave()
+    {
+        isWaveActive = false; // 웨이브 종료 처리
+        yield return new WaitForSeconds(waveDelay); // 대기 시간 추가
+
+        waveNumber++; // 웨이브 수 증가
+        enemiesPerWave += 2; // 웨이브마다 적 수 증가
+        SpawnWave(); // 새로운 웨이브 시작
+
+        isWaveActive = true; // 웨이브 활성화
+        UpdateWaveUI(); // UI 업데이트
+    }
+    void SpawnWave()
+    {
+        for (int i = 0; i < enemiesPerWave; i++)
+        {
+            SpawnEnemy();
+        }
+
+        enemiesAlive = enemiesPerWave; // 살아 있는 적 수 초기화
     }
 
     void SpawnEnemy()
@@ -48,41 +85,63 @@ public class EnemyPoolManager : MonoBehaviour
         int enemyTypeIndex = Random.Range(0, enemyTypes.Length);
         EnemyType selectedEnemy = enemyTypes[enemyTypeIndex];
 
+        // 풀 크기 동적 확장
+        if (enemyPools[selectedEnemy.name].Count == 0) // 풀에 적이 없는 경우
+        {
+            ExpandPool(selectedEnemy); // 풀 확장
+        }
+
         int spawnIndex = Random.Range(0, spawnPoints.Length);
         Transform spawnPoint = spawnPoints[spawnIndex];
 
-        if (enemyPools[selectedEnemy.name].Count > 0)
-        {
-            GameObject enemy = enemyPools[selectedEnemy.name].Dequeue();
-            enemy.transform.position = spawnPoint.position;
-            enemy.transform.rotation = spawnPoint.rotation;
-            enemy.SetActive(true);
+        GameObject enemy = enemyPools[selectedEnemy.name].Dequeue();
+        enemy.transform.position = spawnPoint.position;
+        enemy.transform.rotation = spawnPoint.rotation;
+        enemy.SetActive(true);
 
-            // 적 초기화 (풀에서 꺼낼 때)
-            EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
-            if (enemyAI != null)
-            {
-                enemyAI.enemyType = selectedEnemy.name; // 타입 지정
-                enemyAI.EnemyTakeDamage(0); // 체력 초기화 (또는 별도 초기화 메서드 호출)
-            }
+        // 적 초기화 및 사망 시 콜백 연결
+        EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
+        if (enemyAI != null)
+        {
+            enemyAI.enemyType = selectedEnemy.name;
+            enemyAI.EnemyTakeDamage(0);
+
+            // 기존 이벤트 제거 후 새 이벤트 연결
+            enemyAI.OnDeath -= EnemyDied;
+            enemyAI.OnDeath += EnemyDied;
         }
     }
-    void SpawnWave()
+
+    // 풀 확장 함수 추가
+    void ExpandPool(EnemyType enemyType)
     {
-        for (int i = 0; i < enemiesPerWave; i++)
+        for (int i = 0; i < 5; i++) // 부족 시 5개씩 추가
         {
-            SpawnEnemy();
-            enemiesSpawned++;
+            GameObject enemy = Instantiate(enemyType.prefab, enemyContainer);
+            enemy.SetActive(false);
+            enemyPools[enemyType.name].Enqueue(enemy);
         }
-
-        waveNumber++;
-        enemiesPerWave += 2; // 웨이브마다 적 증가
+        Debug.Log($"{enemyType.name} 풀 확장! 새 크기: {enemyPools[enemyType.name].Count}");
     }
 
+    void UpdateWaveUI()
+    {
+        if (waveText != null)
+        {
+            waveText.text = $"Wave: {waveNumber}";
+            Debug.Log($"웨이브 업데이트: {waveNumber}");
+        }
+    }
+    void EnemyDied()
+    {
+        enemiesAlive--;
+        Debug.Log($"적 사망. 남은 적: {enemiesAlive}");
+    }
     // 풀로 반환
     public void ReturnToPool(GameObject enemy, string type)
     {
         enemy.SetActive(false);
-        enemyPools[type].Enqueue(enemy); // 해당 타입 풀로 반환
+        enemyPools[type].Enqueue(enemy);
+        Debug.Log($"{type} 반환. 현재 풀 크기: {enemyPools[type].Count}");
     }
 }

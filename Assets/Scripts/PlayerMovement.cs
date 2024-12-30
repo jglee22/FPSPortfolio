@@ -66,6 +66,7 @@ public class PlayerMovement : MonoBehaviour
         playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
 
+
         // ¿Ãµø
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");

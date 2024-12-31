@@ -40,12 +40,20 @@ public class GunController : MonoBehaviour
 
         if (currentGun != null)
         {
+            // 기존 무기 비활성화 및 쿨다운 초기화
+            if (currentGun.gunType == GunType.Shotgun) // 이전 무기가 샷건일 경우
+            {
+                currentGun.CancelShotgunCooldown();   // 쿨다운 초기화 호출
+            }
+            currentGun.CancelReload();
             currentGun.gameObject.SetActive(false);
         }
 
         currentGunIndex = index;
         currentGun = guns[currentGunIndex];
         currentGun.gameObject.SetActive(true);
+
+        currentGun.UpdateUI();
 
         // 카메라 회전 초기화 보완
         GunRecoil gunRecoil = currentGun.GetComponent<GunRecoil>();

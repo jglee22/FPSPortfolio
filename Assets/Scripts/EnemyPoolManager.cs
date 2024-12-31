@@ -65,8 +65,14 @@ public class EnemyPoolManager : MonoBehaviour
 
         waveNumber++; // 웨이브 수 증가
         enemiesPerWave += 2; // 웨이브마다 적 수 증가
-        SpawnWave(); // 새로운 웨이브 시작
 
+        // **적 강화 적용**
+        foreach (EnemyType enemyType in enemyTypes)
+        {
+            enemyType.poolSize += 5; // 웨이브마다 풀 크기 확장
+        }
+
+        SpawnWave(); // 새로운 웨이브 시작
         isWaveActive = true; // 웨이브 활성화
         UpdateWaveUI(); // UI 업데이트
     }

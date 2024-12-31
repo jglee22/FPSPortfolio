@@ -1756,7 +1756,6 @@ GameObject:
   - component: {fileID: -8981087478674338902}
   - component: {fileID: 7703299509505015792}
   - component: {fileID: -6817676166872191856}
-  - component: {fileID: -3087168411556640610}
   m_Layer: 0
   m_Name: Zombie1
   m_TagString: Enemy
@@ -1828,7 +1827,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 0}
-  attackRange: 2
+  attackRange: 1.5
   moveSpeed: 3.5
   health: 50
   leftAttackPoint: {fileID: 3890207506298829007}
@@ -1844,6 +1843,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   enemyType: 
+  rotationSpeed: 1
 --- !u!195 &7703299509505015792
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1880,19 +1880,6 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 1, z: 0}
---- !u!114 &-3087168411556640610
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4493914613880827488}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8166e407bef551b4cad607ead07fb95f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  health: 50
 --- !u!1 &4710940672626480558
 GameObject:
   m_ObjectHideFlags: 0

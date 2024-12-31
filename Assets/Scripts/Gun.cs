@@ -36,6 +36,7 @@ public class Gun : MonoBehaviour
     // 샷건 전용 변수
     public int pellets = 1;              // 샷건 탄환 개수
     public float spreadAngle = 0f;       // 샷건 확산 각도
+    
     private bool isShotgunCooldown = false; // 샷건 쿨다운 상태
     public float shotgunCooldownTime = 1.0f; // 샷건 딜레이 시간
 
@@ -75,7 +76,7 @@ public class Gun : MonoBehaviour
         weaponRecoil = FindObjectOfType<WeaponRecoil>();
         UpdateUI();
     }
-
+    
     void Update()
     {  
         // 재장전 중이면 조작 금지
@@ -164,7 +165,7 @@ public class Gun : MonoBehaviour
     }
 
     // UI 업데이트
-    void UpdateUI()
+    public void UpdateUI()
     {
         ammoText.text = currentAmmo + " / " + maxAmmo;
         fireModeText.text = isAutoFire ? "AUTO" : "SINGLE";
@@ -270,10 +271,21 @@ public class Gun : MonoBehaviour
         isReloading = false;
         UpdateUI();
     }
+    public void CancelReload()
+    {
+        StopCoroutine(Reload()); // 진행 중인 코루틴 중단
+        isReloading = false;     // 재장전 상태 초기화
+    }
+
     IEnumerator ShotgunCooldown()
     {
         isShotgunCooldown = true; // 쿨다운 시작
         yield return new WaitForSeconds(shotgunCooldownTime); // 딜레이 적용
         isShotgunCooldown = false; // 쿨다운 해제
+    }
+    public void CancelShotgunCooldown()
+    {
+        StopCoroutine(ShotgunCooldown()); // 진행 중인 코루틴 중단
+        isShotgunCooldown = false;        // 쿨다운 상태 해제
     }
 }

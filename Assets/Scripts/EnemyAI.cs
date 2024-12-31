@@ -42,7 +42,7 @@ public class EnemyAI : MonoBehaviour
     // 회전 관련 변수
     private Vector3 targetPosition; // 공격 시 고정할 플레이어 위치
     private Quaternion lookRotation; // 공격 방향 고정 회전 값
-
+    public float rotationSpeed = 1f;
 
     public event System.Action OnDeath; // 사망 이벤트
 
@@ -57,6 +57,13 @@ public class EnemyAI : MonoBehaviour
 
         // 풀 매니저 참조
         poolManager = FindObjectOfType<EnemyPoolManager>();
+
+        // 웨이브 기반 강화 적용
+        int waveNumber = poolManager.waveNumber; // 현재 웨이브 가져오기
+        health += waveNumber * 10;              // 웨이브당 체력 증가
+        moveSpeed += waveNumber * 0.1f;         // 웨이브당 속도 증가
+        attackDamage += waveNumber * 2;         // 웨이브당 공격력 증가
+        agent.speed = moveSpeed;                // 이동 속도 업데이트
     }
 
     void Update()
@@ -122,10 +129,15 @@ public class EnemyAI : MonoBehaviour
 
             // 공격 시 플레이어 위치 고정
             targetPosition = player.position; // 공격 시작 시 위치 저장
-            lookRotation = Quaternion.LookRotation((targetPosition - transform.position).normalized);
 
+            Vector3 direction =  (targetPosition - transform.position).normalized; // 방향 계산
+            direction.y = 0;
+
+            //lookRotation = Quaternion.LookRotation((targetPosition - transform.position).normalized);
+            lookRotation = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, rotationSpeed * Time.deltaTime);
             // 공격 방향 고정
-            transform.rotation = lookRotation;
+            //transform.rotation = lookRotation;
 
             // 애니메이션 실행
             animator.SetBool("isAttacking", true);
@@ -224,9 +236,15 @@ public class EnemyAI : MonoBehaviour
         isAttacking = false; // 공격 상태 해제
         agent.isStopped = false; // 이동 재개
         agent.SetDestination(player.position);
+        Vector3 nextPos = agent.steeringTarget - transform.position;
 
+        if (nextPos != Vector3.zero)
+        {
+            Quaternion lookRotation = Quaternion.LookRotation(nextPos.normalized);
+            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 10f);
+        }
         // 이동 중에도 방향 업데이트
-        RotateTowardsPlayer();
+        //RotateTowardsPlayer();
 
         animator.SetBool("isMoving", true);
         animator.SetBool("isAttacking", false);

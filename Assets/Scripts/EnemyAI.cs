@@ -86,6 +86,8 @@ public class EnemyAI : MonoBehaviour
             animator.SetBool("isAttacking", false);
             if(!animator.GetBool("isIdle"))
             animator.SetBool("isIdle", true);
+
+            Debug.Log("Player Dead ");
             return;
         }
         // 공격 도중에는 회전 고정, 상태 전환 차단

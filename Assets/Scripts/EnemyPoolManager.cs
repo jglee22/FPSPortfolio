@@ -10,6 +10,7 @@ public class EnemyPoolManager : MonoBehaviour
         public string name;            // 적 이름
         public GameObject prefab;      // 적 프리팹
         public int poolSize = 10;      // 초기 풀 크기
+        public bool isBoss = false;
     }
 
     public Transform enemyContainer;
@@ -28,6 +29,7 @@ public class EnemyPoolManager : MonoBehaviour
 
     private Dictionary<string, Queue<GameObject>> enemyPools; // 적 풀 관리 딕셔너리
 
+    public bool isTestBoss = false;
 
     void Start()
     {
@@ -80,21 +82,49 @@ public class EnemyPoolManager : MonoBehaviour
     {
         for (int i = 0; i < enemiesPerWave; i++)
         {
-            SpawnEnemy();
+            if (!isTestBoss)
+            {
+                if (waveNumber % 3 == 0 && i == enemiesPerWave - 1) // 3웨이브마다 마지막 적을 보스로 변경
+                {
+                    SpawnEnemy(true); // 보스 소환
+                }
+                else
+                {
+                    SpawnEnemy(false); // 일반 적 소환
+                }
+            }
+            else
+            {
+                SpawnEnemy(true);
+            }
         }
 
         enemiesAlive = enemiesPerWave; // 살아 있는 적 수 초기화
     }
 
-    void SpawnEnemy()
+    void SpawnEnemy(bool isBoss)
     {
-        int enemyTypeIndex = Random.Range(0, enemyTypes.Length);
-        EnemyType selectedEnemy = enemyTypes[enemyTypeIndex];
+        EnemyType selectedEnemy;
+
+        if (isBoss) // 보스 소환
+        {
+            selectedEnemy = System.Array.Find(enemyTypes, e => e.isBoss); // 보스 타입 찾기
+        }
+        else
+        {
+            int enemyTypeIndex = Random.Range(0, enemyTypes.Length);
+            selectedEnemy = enemyTypes[enemyTypeIndex];
+            while (selectedEnemy.isBoss) // 일반 적 중 선택
+            {
+                enemyTypeIndex = Random.Range(0, enemyTypes.Length);
+                selectedEnemy = enemyTypes[enemyTypeIndex];
+            }
+        }
 
         // 풀 크기 동적 확장
-        if (enemyPools[selectedEnemy.name].Count == 0) // 풀에 적이 없는 경우
+        if (enemyPools[selectedEnemy.name].Count == 0)
         {
-            ExpandPool(selectedEnemy); // 풀 확장
+            ExpandPool(selectedEnemy);
         }
 
         int spawnIndex = Random.Range(0, spawnPoints.Length);
@@ -115,6 +145,14 @@ public class EnemyPoolManager : MonoBehaviour
             // 기존 이벤트 제거 후 새 이벤트 연결
             enemyAI.OnDeath -= EnemyDied;
             enemyAI.OnDeath += EnemyDied;
+
+            // **보스 강화 설정 추가**
+            if (isBoss)
+            {
+                enemyAI.health += waveNumber * 20;     // 더 높은 체력
+                enemyAI.attackDamage += waveNumber * 5; // 더 높은 공격력
+                enemyAI.moveSpeed += 0.5f;            // 더 빠른 속도
+            }
         }
     }
 

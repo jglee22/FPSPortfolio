@@ -106,9 +106,9 @@ NavMeshSettings:
     serializedVersion: 2
     agentTypeID: 0
     agentRadius: 0.5
-    agentHeight: 2
+    agentHeight: 1
     agentSlope: 45
-    agentClimb: 0.4
+    agentClimb: 0.3
     ledgeDropHeight: 0
     maxJumpAcrossDistance: 0
     minRegionArea: 2
@@ -121,7 +121,7 @@ NavMeshSettings:
     preserveTilesOutsideBounds: 0
     debug:
       m_Flags: 0
-  m_NavMeshData: {fileID: 23800000, guid: f4470f38f1f98e84ba13783f9817ff11, type: 2}
+  m_NavMeshData: {fileID: 23800000, guid: b57b5dfe907b39843a653758fb5e9154, type: 2}
 --- !u!1001 &1309139
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2292,7 +2292,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 262.7, y: -41.8}
+  m_AnchoredPosition: {x: 262.69995, y: -41.80005}
   m_SizeDelta: {x: 480, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &182160499
@@ -10423,6 +10423,7 @@ MonoBehaviour:
   damage: 10
   pellets: 1
   spreadAngle: 0
+  shotgunCooldownTime: 1
   gunBarrel: {fileID: 886588117}
   fpsCamera: {fileID: 1791591021}
   muzzleFlash: {fileID: 0}
@@ -11294,7 +11295,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 845665488}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 43.7, y: 1, z: -27.1}
+  m_LocalPosition: {x: 43.7, y: 0, z: -27.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11493,6 +11494,7 @@ GameObject:
   - component: {fileID: 865808394}
   - component: {fileID: 865808395}
   - component: {fileID: 865808396}
+  - component: {fileID: 865808397}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -11621,6 +11623,23 @@ MonoBehaviour:
   guns:
   - {fileID: 734497985}
   - {fileID: 796523436}
+--- !u!114 &865808397
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 865808389}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c33c5e768fcf0841a8ceb9fb3351e45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grenadePrefab: {fileID: 100010, guid: e889f3b0fa9bf2e4b87b0bd49cd501f8, type: 3}
+  throwPoint: {fileID: 2033862220}
+  throwForce: 20
+  grenadeCount: 3
+  throwCooldown: 1
 --- !u!4 &867352512 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4000011940550886, guid: 31fee1c2b8079524babddad687e95210, type: 3}
@@ -14906,7 +14925,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -102, y: 61.200012}
+  m_AnchoredPosition: {x: -102, y: 61.19995}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1080109534
@@ -19884,7 +19903,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -102, y: 29.700012}
+  m_AnchoredPosition: {x: -102, y: 29.699951}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1475755708
@@ -24419,6 +24438,7 @@ Transform:
   m_Children:
   - {fileID: 734497979}
   - {fileID: 796523433}
+  - {fileID: 2033862220}
   m_Father: {fileID: 865808392}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -26864,17 +26884,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa7123ab37c6be34fb6095b7837c38aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyContainer: {fileID: 0}
+  enemyContainer: {fileID: 629410008}
   enemyTypes:
   - name: Enemy1
     prefab: {fileID: 4493914613880827488, guid: 6dc4cf4496348884d8ee27743ae38562, type: 3}
     poolSize: 3
+    isBoss: 0
   - name: Enemy2
     prefab: {fileID: 1998371697940912222, guid: d58be77cba3adf54cb14b15052b86514, type: 3}
     poolSize: 3
+    isBoss: 0
   - name: Enemy3
     prefab: {fileID: 4803014352389650695, guid: 06cb2b131fe009c47a523671a8fa9ed8, type: 3}
     poolSize: 3
+    isBoss: 0
+  - name: Enemy4
+    prefab: {fileID: 1352753540370996, guid: 43b3bfc3c2f2ff146a8d85e63d0a4e26, type: 3}
+    poolSize: 3
+    isBoss: 1
   spawnPoints:
   - {fileID: 845665489}
   - {fileID: 2097627445}
@@ -26883,6 +26910,7 @@ MonoBehaviour:
   enemiesPerWave: 5
   waveText: {fileID: 2140539947}
   waveDelay: 5
+  isTestBoss: 1
 --- !u!4 &1932853650
 Transform:
   m_ObjectHideFlags: 0
@@ -28213,6 +28241,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4000010482363180, guid: 32c4edf4f02ad254092a6e1ba94f5b4e, type: 3}
   m_PrefabInstance: {fileID: 2028429108}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2033862219
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2033862220}
+  m_Layer: 0
+  m_Name: GrenadeThrowPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2033862220
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2033862219}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0, y: 0, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1791591022}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &2037511656 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4000011940550886, guid: 31fee1c2b8079524babddad687e95210, type: 3}
@@ -28807,7 +28866,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2092326507}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 62.9, y: 1, z: 14.9}
+  m_LocalPosition: {x: 62.9, y: 0, z: 14.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -28924,7 +28983,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2097627444}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 55.3, y: 1, z: -0.2}
+  m_LocalPosition: {x: 55.3, y: 0, z: -0.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

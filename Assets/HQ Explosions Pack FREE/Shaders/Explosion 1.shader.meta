@@ -1,0 +1,11 @@
+fileFormatVersion: 2
+guid: a1df6db5915721f478cd3d05a5ab6f67
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _Explosion_Tex: {fileID: 2800000, guid: 95e28f80a9cb13346ba155bc68c52e41, type: 3}
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

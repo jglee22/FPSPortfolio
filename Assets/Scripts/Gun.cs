@@ -40,8 +40,6 @@ public class Gun : MonoBehaviour
     private bool isShotgunCooldown = false; // 샷건 쿨다운 상태
     public float shotgunCooldownTime = 1.0f; // 샷건 딜레이 시간
 
-
-
     // 총구 위치와 카메라 설정
     public Transform gunBarrel;      // 총구 위치
     public Camera fpsCamera;         // 카메라
@@ -76,7 +74,7 @@ public class Gun : MonoBehaviour
         weaponRecoil = FindObjectOfType<WeaponRecoil>();
         UpdateUI();
     }
-    
+   
     void Update()
     {  
         // 재장전 중이면 조작 금지
@@ -206,6 +204,8 @@ public class Gun : MonoBehaviour
                 gunAudioSource.Play();
             }
         }
+        if (muzzleFlash != null)
+            Instantiate(muzzleFlash, gunBarrel);
         currentAmmo--;
         if (gunType == GunType.Shotgun)
         {

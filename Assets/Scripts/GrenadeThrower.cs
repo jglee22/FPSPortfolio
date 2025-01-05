@@ -1,23 +1,33 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using TMPro;
 public class GrenadeThrower : MonoBehaviour
 {
     public GameObject grenadePrefab; // 수류탄 프리팹
     public Transform throwPoint;     // 던지는 위치
     public float throwForce = 20f;   // 던지는 힘
 
-    public int grenadeCount = 3;     // 수류탄 개수
+    public TextMeshProUGUI grenadeCountText;
+
+    public int maxGrenadeCount = 3;
+    public int currentGrenadeCount;     // 수류탄 개수
     public float throwCooldown = 1f; // 투척 쿨다운
     private bool isCooldown = false;
 
+    private void Start()
+    {
+        currentGrenadeCount = maxGrenadeCount;
+        grenadeCountText.text = " x " + maxGrenadeCount.ToString();
+    }
+
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.G) && grenadeCount > 0 && !isCooldown)
+        if (Input.GetKeyDown(KeyCode.G) && currentGrenadeCount > 0 && !isCooldown)
         {
             ThrowGrenade(); // 수류탄 던지기
-            grenadeCount--; // 수류탄 개수 감소
+            currentGrenadeCount--; // 수류탄 개수 감소
+            grenadeCountText.text = " x " + currentGrenadeCount.ToString();
             StartCoroutine(ThrowCooldown());
         }
     }

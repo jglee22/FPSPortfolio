@@ -1544,6 +1544,7 @@ MonoBehaviour:
     m_Bits: 128
   enemyType: 
   rotationSpeed: 1
+  enemyData: {fileID: 11400000, guid: c74f50a275472874aa2559a62a04174d, type: 2}
 --- !u!136 &4561393753183005836
 CapsuleCollider:
   m_ObjectHideFlags: 0

@@ -82,23 +82,15 @@ public class EnemyPoolManager : MonoBehaviour
     {
         for (int i = 0; i < enemiesPerWave; i++)
         {
-            if (!isTestBoss)
+            if (waveNumber % 3 == 0 && i == enemiesPerWave - 1) // 3웨이브마다 마지막 적을 보스로 변경
             {
-                if (waveNumber % 3 == 0 && i == enemiesPerWave - 1) // 3웨이브마다 마지막 적을 보스로 변경
-                {
-                    SpawnEnemy(true); // 보스 소환
-                }
-                else
-                {
-                    SpawnEnemy(false); // 일반 적 소환
-                }
+                SpawnEnemy(true); // 보스 소환
             }
             else
             {
-                SpawnEnemy(true);
+                SpawnEnemy(false); // 일반 적 소환
             }
         }
-
         enemiesAlive = enemiesPerWave; // 살아 있는 적 수 초기화
     }
 

@@ -537,6 +537,7 @@ MonoBehaviour:
     m_Bits: 128
   enemyType: 
   rotationSpeed: 1
+  enemyData: {fileID: 11400000, guid: e0862ac2f95b4784a9db39a0720eefd7, type: 2}
 --- !u!195 &-7878785858865131359
 NavMeshAgent:
   m_ObjectHideFlags: 0

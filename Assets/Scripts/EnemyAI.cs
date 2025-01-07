@@ -307,8 +307,14 @@ public class EnemyAI : MonoBehaviour
 
     public void EnemyTakeDamage(int damage)
     {
-        if(isDead) return;
+        if (isDead) return;
+
         health -= damage;
+        if (health < 0)
+        {
+            health = 0;
+            return;
+        }
         Debug.Log($"Enemy HP : {health}");
     }
 

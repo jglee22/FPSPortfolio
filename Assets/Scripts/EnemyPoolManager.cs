@@ -29,8 +29,6 @@ public class EnemyPoolManager : MonoBehaviour
 
     private Dictionary<string, Queue<GameObject>> enemyPools; // 적 풀 관리 딕셔너리
 
-    public bool isTestBoss = false;
-
     void Start()
     {
         // 초기화
@@ -127,6 +125,9 @@ public class EnemyPoolManager : MonoBehaviour
         enemy.transform.rotation = spawnPoint.rotation;
         enemy.SetActive(true);
 
+        // 적 추가
+        EnemyCounterManager.Instance.AddEnemy(); // 적 생성 시 카운트 증가
+
         // 적 초기화 및 사망 시 콜백 연결
         EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
         if (enemyAI != null)
@@ -171,6 +172,7 @@ public class EnemyPoolManager : MonoBehaviour
     void EnemyDied()
     {
         enemiesAlive--;
+        EnemyCounterManager.Instance.RemoveEnemy(); //적 카운트
         Debug.Log($"적 사망. 남은 적: {enemiesAlive}");
     }
     // 풀로 반환

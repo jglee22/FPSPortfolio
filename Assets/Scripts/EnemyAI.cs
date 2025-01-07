@@ -259,6 +259,18 @@ public class EnemyAI : MonoBehaviour
 
         isDead = true;
         agent.isStopped = true;
+        int score = 0;
+
+        if (enemyType == "Normal")
+        {
+            score = 100;
+        }
+        else
+            score = 300;
+        //점수 추가
+        ScoreManager.Instance.AddScore(score); // 적 사망 시 점수 추가
+
+        
 
         animator.SetBool("isMoving", false);
         animator.SetBool("isAttacking", false);

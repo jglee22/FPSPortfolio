@@ -27,12 +27,15 @@ public class Leaning : MonoBehaviour
             targetLean = 0f; // 초기화
         }
 
-        // 부드러운 회전 전환
-        currentLean = Mathf.Lerp(currentLean, targetLean, Time.deltaTime * leanSpeed);
+        if(currentLean != targetLean)
+        {
+            // 부드러운 회전 전환
+            currentLean = Mathf.Lerp(currentLean, targetLean, Time.deltaTime * leanSpeed);
 
-        // 기존 회전값에 기울기 추가 (Y축 회전 유지)
-        Quaternion baseRotation = Quaternion.Euler(cameraTransform.localRotation.eulerAngles.x, cameraTransform.localRotation.eulerAngles.y, 0);
-        Quaternion leanRotation = Quaternion.Euler(0, 0, currentLean);
-        cameraTransform.localRotation = baseRotation * leanRotation; // 기존 회전 + 기울기 적용
+            // 기존 회전값에 기울기 추가 (Y축 회전 유지)
+            Quaternion baseRotation = Quaternion.Euler(cameraTransform.localRotation.eulerAngles.x, cameraTransform.localRotation.eulerAngles.y, 0);
+            Quaternion leanRotation = Quaternion.Euler(0, 0, currentLean);
+            cameraTransform.localRotation = baseRotation * leanRotation; // 기존 회전 + 기울기 적용
+        }
     }
 }

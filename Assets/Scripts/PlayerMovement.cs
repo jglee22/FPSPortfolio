@@ -33,7 +33,6 @@ public class PlayerMovement : MonoBehaviour
         Cursor.visible = false;
 
     }
-
     void Update()
     {
         if (playerHealth != null)

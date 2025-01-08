@@ -1542,9 +1542,14 @@ MonoBehaviour:
   obstacleMask:
     serializedVersion: 2
     m_Bits: 128
+  dropItems:
+  - {fileID: 1296605364670726625, guid: 2bf0fa198835a4c448f8c6ecfc6fc1c1, type: 3}
+  - {fileID: 1296605364670726625, guid: 52c9b50c37830cd4cb6f906331d7cf6d, type: 3}
+  - {fileID: 4779774426286159891, guid: 1f57c00897155d44d82988c518060477, type: 3}
+  - {fileID: 4779774426286159891, guid: d8269a8616d8018459ed73de90572d7b, type: 3}
+  dropChance: 1
   enemyType: 
   rotationSpeed: 1
-  enemyData: {fileID: 11400000, guid: c74f50a275472874aa2559a62a04174d, type: 2}
 --- !u!136 &4561393753183005836
 CapsuleCollider:
   m_ObjectHideFlags: 0

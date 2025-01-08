@@ -10963,6 +10963,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gunType: 1
+  gunName: Shotgun
   maxAmmo: 8
   currentAmmo: 0
   reloadTime: 2
@@ -12349,6 +12350,10 @@ PrefabInstance:
       propertyPath: recoil
       value: 
       objectReference: {fileID: 734497981}
+    - target: {fileID: -8817805550361611176, guid: 9bac10e691f2b134e8a762aac4cb9231, type: 3}
+      propertyPath: gunName
+      value: Rifle
+      objectReference: {fileID: 0}
     - target: {fileID: -8817805550361611176, guid: 9bac10e691f2b134e8a762aac4cb9231, type: 3}
       propertyPath: ammoText
       value: 

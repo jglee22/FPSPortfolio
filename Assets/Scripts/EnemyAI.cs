@@ -25,6 +25,10 @@ public class EnemyAI : MonoBehaviour
     public float viewDistance = 10f; // 시야 거리
     public LayerMask obstacleMask; // 장애물 레이어
 
+    public GameObject[] dropItems; // 드랍 아이템 배열
+    public float dropChance = 1f; // 드랍 확률 (50%)
+
+
     // 상태 관리
     private NavMeshAgent agent;
     private Animator animator;
@@ -259,6 +263,7 @@ public class EnemyAI : MonoBehaviour
 
         isDead = true;
         agent.isStopped = true;
+        DropItem();
         int score = 0;
 
         if (enemyType == "Normal")
@@ -316,6 +321,15 @@ public class EnemyAI : MonoBehaviour
             return;
         }
         Debug.Log($"Enemy HP : {health}");
+    }
+
+    void DropItem()
+    {
+        if (Random.value < dropChance && dropItems.Length > 0) // 확률 체크
+        {
+            int randomIndex = Random.Range(0, dropItems.Length);
+            Instantiate(dropItems[randomIndex], transform.position, Quaternion.identity); // 랜덤 아이템 드랍
+        }
     }
 
     void OnDrawGizmosSelected()

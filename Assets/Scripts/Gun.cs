@@ -17,6 +17,7 @@ public class Gun : MonoBehaviour
 {
     // 무기 타입 설정
     public GunType gunType; // 무기 타입 선택
+    public string gunName;         // 총기 이름 (Rifle 또는 Shotgun)
 
     // 탄약 및 재장전 설정
     public int maxAmmo = 30;
@@ -287,5 +288,17 @@ public class Gun : MonoBehaviour
     {
         StopCoroutine(ShotgunCooldown()); // 진행 중인 코루틴 중단
         isShotgunCooldown = false;        // 쿨다운 상태 해제
+    }
+
+    public void IncreaseDamage(int amount)
+    {
+        damage += amount;
+        Debug.Log($"{gunName} 데미지 증가: {damage}");
+    }
+
+    public void IncreaseMaxAmmo(int amount)
+    {
+        maxAmmo += amount;
+        Debug.Log($"{gunName} 최대 탄수 증가: {maxAmmo}");
     }
 }

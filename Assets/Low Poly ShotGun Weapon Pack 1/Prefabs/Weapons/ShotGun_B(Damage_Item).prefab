@@ -590,9 +590,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5268924766172488361}
-  - component: {fileID: 1200845696215871770}
+  - component: {fileID: -8553776398750742725}
+  - component: {fileID: 5974251087032109369}
   m_Layer: 0
-  m_Name: ShotGun_B
+  m_Name: ShotGun_B(Damage_Item)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -622,7 +623,21 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &1200845696215871770
+--- !u!114 &-8553776398750742725
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4779774426286159891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48e6283d834c6ab4a8abdab7dc0c1fb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  upgradeItem: {fileID: 11400000, guid: 9232e8c17516eb54b94477ebccaa18fc, type: 2}
+  pickupSound: {fileID: 0}
+--- !u!65 &5974251087032109369
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

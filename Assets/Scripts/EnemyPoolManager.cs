@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.AI;
 public class EnemyPoolManager : MonoBehaviour
 {
     [System.Serializable] // 적 종류별 데이터 관리
@@ -123,6 +124,7 @@ public class EnemyPoolManager : MonoBehaviour
         GameObject enemy = enemyPools[selectedEnemy.name].Dequeue();
         enemy.transform.position = spawnPoint.position;
         enemy.transform.rotation = spawnPoint.rotation;
+        enemy.GetComponent<CapsuleCollider>().enabled = true;
         enemy.SetActive(true);
 
         // 적 추가

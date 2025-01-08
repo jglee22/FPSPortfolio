@@ -270,7 +270,7 @@ public class EnemyAI : MonoBehaviour
         //점수 추가
         ScoreManager.Instance.AddScore(score); // 적 사망 시 점수 추가
 
-        
+        GetComponent<CapsuleCollider>().enabled = false; // collider를 비활성화 해서 길 막는 현상 제거
 
         animator.SetBool("isMoving", false);
         animator.SetBool("isAttacking", false);

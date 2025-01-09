@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 
@@ -96,23 +97,34 @@ public class Gun : MonoBehaviour
             return;
         }
 
-        // 단발 모드
-        if (!isAutoFire && Input.GetButtonDown("Fire1") && currentAmmo > 0)
+        if (!IsPointerOverUI())
         {
-            if (gunType == GunType.Shotgun && isShotgunCooldown) return; // 샷건 쿨다운 체크
-            Shoot();
-
-            if (gunType == GunType.Shotgun) // 샷건일 경우 쿨다운 시작
+            // 단발 모드
+            if (!isAutoFire && Input.GetButtonDown("Fire1") && currentAmmo > 0)
             {
-                StartCoroutine(ShotgunCooldown());
+                if (gunType == GunType.Shotgun && isShotgunCooldown) return; // 샷건 쿨다운 체크
+                Shoot();
+
+                if (gunType == GunType.Shotgun) // 샷건일 경우 쿨다운 시작
+                {
+                    StartCoroutine(ShotgunCooldown());
+                }
+                gunRecoil.SetFiringState(true);
+                weaponRecoil.SetFiringState(true);
+            }
+            // 연사 모드
+            else if (isAutoFire && Input.GetButton("Fire1") && currentAmmo > 0 && Time.time >= nextTimeToFire)
+            {
+                nextTimeToFire = Time.time + fireRate;
+                Shoot();
             }
         }
-        // 연사 모드
-        else if (isAutoFire && Input.GetButton("Fire1") && currentAmmo > 0 && Time.time >= nextTimeToFire)
+        if(Input.GetButtonUp("Fire1"))
         {
-            nextTimeToFire = Time.time + fireRate;
-            Shoot();
+            gunRecoil.SetFiringState(false);
+            weaponRecoil.SetFiringState(false);
         }
+
 
         // 크로스헤어 업데이트
         UpdateCrosshair();
@@ -300,5 +312,18 @@ public class Gun : MonoBehaviour
     {
         maxAmmo += amount;
         Debug.Log($"{gunName} 최대 탄수 증가: {maxAmmo}");
+    }
+    // UI 위에서 클릭 할 경우 사격을 막기 위한 함수
+    private bool IsPointerOverUI()
+    {
+        // PC에서 마우스
+        if (EventSystem.current.IsPointerOverGameObject())
+            return true;
+
+        // 모바일에서 터치
+        if (Input.touchCount > 0 && EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId))
+            return true;
+
+        return false;
     }
 }

@@ -12,6 +12,12 @@ public class WeaponRecoil : MonoBehaviour
     private Vector3 originalPosition;  // 원래 위치
     private Vector3 recoilPosition;    // 반동 위치
 
+    private PlayerHealth playerHealth;
+    private bool isFiring = false;
+    private void Awake()
+    {
+        playerHealth = FindObjectOfType<PlayerHealth>();
+    }
     void Start()
     {
         originalPosition = weaponTransform.localPosition;
@@ -19,15 +25,25 @@ public class WeaponRecoil : MonoBehaviour
 
     void Update()
     {
-        // 반동 위치에서 원래 위치로 회복
-        weaponTransform.localPosition = Vector3.Lerp(weaponTransform.localPosition, originalPosition, Time.deltaTime * recoilSpeed);
+        //if (!playerHealth.isPlayerDie && isFiring)
+        //{
+            // 반동 위치에서 원래 위치로 회복
+            weaponTransform.localPosition = Vector3.Lerp(weaponTransform.localPosition, originalPosition, Time.deltaTime * recoilSpeed);
+        //}
     }
 
     public void ApplyRecoil()
     {
-        // 무기 반동 누적 처리
-        recoilPosition = weaponTransform.localPosition - Vector3.forward * recoilAmount;
-        recoilPosition.z = Mathf.Clamp(recoilPosition.z, -maxRecoil, 0); // 최대 반동 제한
-        weaponTransform.localPosition = recoilPosition;
+        if (!playerHealth.isPlayerDie)
+        {
+            // 무기 반동 누적 처리
+            recoilPosition = weaponTransform.localPosition - Vector3.forward * recoilAmount;
+            recoilPosition.z = Mathf.Clamp(recoilPosition.z, -maxRecoil, 0); // 최대 반동 제한
+            weaponTransform.localPosition = recoilPosition;
+        }
+    }
+    public void SetFiringState(bool firing)
+    {
+        isFiring = firing; // 사격 상태 업데이트
     }
 }

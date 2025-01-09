@@ -13,29 +13,47 @@ public class GunRecoil : MonoBehaviour
     private Vector3 currentRotation;   // 현재 회전 값
     private Vector3 targetRotation;    // 목표 회전 값
 
+    private PlayerHealth playerHealth;
+    private bool isFiring = false;
+    private void Awake()
+    {
+        playerHealth = FindObjectOfType<PlayerHealth>();
+    }
     void Update()
     {
-        // 반동 회복 처리
-        targetRotation = Vector3.Lerp(targetRotation, Vector3.zero, recoilSpeed * Time.deltaTime);
-        currentRotation = Vector3.Slerp(currentRotation, targetRotation, recoilSpeed * Time.deltaTime);
+        if (!playerHealth.isPlayerDie && isFiring)
+        {
+            // 반동 회복 처리
+            targetRotation = Vector3.Lerp(targetRotation, Vector3.zero, recoilSpeed * Time.deltaTime);
+            currentRotation = Vector3.Slerp(currentRotation, targetRotation, recoilSpeed * Time.deltaTime);
 
-        // 기존 회전값에 반동 추가
-        Quaternion originalRotation = cameraTransform.localRotation; // 기존 회전값 저장
-        Quaternion recoilRotation = Quaternion.Euler(currentRotation); // 반동 회전값 생성
-        cameraTransform.localRotation = originalRotation * recoilRotation; // 기존 회전에 반동값 곱하기
+            // 기존 회전값에 반동 추가
+            Quaternion originalRotation = cameraTransform.localRotation; // 기존 회전값 저장
+            Quaternion recoilRotation = Quaternion.Euler(currentRotation); // 반동 회전값 생성
+            cameraTransform.localRotation = originalRotation * recoilRotation; // 기존 회전에 반동값 곱하기
+        }
     }
 
     public void ApplyRecoil()
     {
-        // 반동 누적
-        targetRotation += new Vector3(
-            Random.Range(-recoilAmount, recoilAmount),   // 상하 반동
-            Random.Range(-recoilAmount / 2, recoilAmount / 2), // 좌우 반동
-            0
-        );
+        if (!playerHealth.isPlayerDie)
+        {
 
-        // 최대 반동 제한 적용
-        targetRotation.x = Mathf.Clamp(targetRotation.x, -maxRecoilX, maxRecoilX);
-        targetRotation.y = Mathf.Clamp(targetRotation.y, -maxRecoilY, maxRecoilY);
+
+            // 반동 누적
+            targetRotation += new Vector3(
+                Random.Range(-recoilAmount, recoilAmount),   // 상하 반동
+                Random.Range(-recoilAmount / 2, recoilAmount / 2), // 좌우 반동
+                0
+            );
+
+            // 최대 반동 제한 적용
+            targetRotation.x = Mathf.Clamp(targetRotation.x, -maxRecoilX, maxRecoilX);
+            targetRotation.y = Mathf.Clamp(targetRotation.y, -maxRecoilY, maxRecoilY);
+        }
+    }
+    public void SetFiringState(bool firing)
+    {
+        isFiring = firing; // 사격 상태 업데이트
     }
 }

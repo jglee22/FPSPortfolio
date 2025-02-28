@@ -16,6 +16,9 @@ public class ItemPickup : MonoBehaviour
             if (pickupSound != null)
                 AudioSource.PlayClipAtPoint(pickupSound, transform.position);
 
+            // UI 매니저에게 메시지 전달
+            PickupMessageManager.Instance.EnqueuePickupMessage($"{upgradeItem.weaponType} 업그레이드 획득!");
+
             Destroy(gameObject); // 아이템 제거
         }
     }

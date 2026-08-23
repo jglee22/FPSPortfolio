@@ -1,187 +1,224 @@
 using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.EditorTools;
 using UnityEngine;
 using UnityEngine.AI;
 
-
 public class EnemyAI : MonoBehaviour
 {
-    // 플레이어 및 기본 설정
-    public Transform player; // 플레이어 위치
-    private PlayerHealth playerHealth; // 플레이어 체력 관리
-    public float attackRange = 2.0f; // 공격 범위
-    public float moveSpeed = 3.5f;  // 이동 속도
-    public int health = 100;        // 체력
+    public Transform player;
+    private PlayerHealth playerHealth;
+    public float attackRange = 2.0f;
+    public float moveSpeed = 3.5f;
+    public int health = 100;
 
-    // 공격 설정
-    public Transform leftAttackPoint;   // 왼손 공격 지점
-    public Transform rightAttackPoint;  // 오른손 공격 지점
-    public float attackRadius = 1.5f;   // 공격 반경
-    public LayerMask playerLayer;       // 플레이어 레이어 설정
-    public int attackDamage = 10;       // 공격 데미지
+    public Transform leftAttackPoint;
+    public Transform rightAttackPoint;
+    public float attackRadius = 1.5f;
+    public LayerMask playerLayer;
+    public int attackDamage = 10;
 
-    public float viewAngle = 60f; // 시야각(도 단위)
-    public float viewDistance = 10f; // 시야 거리
-    public LayerMask obstacleMask; // 장애물 레이어
+    public float viewAngle = 60f;
+    public float viewDistance = 10f;
+    public LayerMask obstacleMask;
 
-    public GameObject[] dropItems; // 드랍 아이템 배열
-    public float dropChance = 1f; // 드랍 확률 (50%)
+    public GameObject[] dropItems;
+    public float dropChance = 1f;
 
+    [SerializeField] int healthPerWave = 10;
+    [SerializeField] float speedPerWave = 0.1f;
+    [SerializeField] int damagePerWave = 2;
+    [SerializeField] int bossHealthPerWave = 20;
+    [SerializeField] int bossDamagePerWave = 5;
+    [SerializeField] float bossSpeedBonus = 0.5f;
 
-    // 상태 관리
     private NavMeshAgent agent;
     private Animator animator;
+    private CapsuleCollider capsuleCollider;
+    private Collider[] bodyColliders;
     private bool isAttacking = false;
     private bool isDead = false;
     private bool isRotatingAfterAttack = false;
+    private bool isPlayerDead = false;
+    private Coroutine attackRoutine;
+    private Coroutine hitStunRoutine;
+    private Coroutine flashRoutine;
+    static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
-    // 플레이어 상태 추가
-    private bool isPlayerDead = false; // 플레이어 사망 여부
-
-    // 추가: 적 타입 및 풀 매니저 참조
     private EnemyPoolManager poolManager;
-    public string enemyType; // EnemyPoolManager에 정의된 타입 이름
+    public string enemyType;
 
-    // 회전 관련 변수
-    private Vector3 targetPosition; // 공격 시 고정할 플레이어 위치
-    private Quaternion lookRotation; // 공격 방향 고정 회전 값
+    private Vector3 targetPosition;
+    private Quaternion lookRotation;
     public float rotationSpeed = 1f;
 
-    public event System.Action OnDeath; // 사망 이벤트
+    private int baseHealth;
+    private int maxHealth;
+    private float baseMoveSpeed;
+    private int baseAttackDamage;
+    private bool hasCachedBaseStats;
+    private bool spawnedAsBoss;
 
+    public event System.Action OnDeath;
+    public event System.Action<int, int> OnHealthChanged;
 
-    void Start()
+    public int MaxHealth => maxHealth;
+    public int CurrentHealth => health;
+    public bool IsBoss => spawnedAsBoss;
+
+    void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
-        player = FindObjectOfType<PlayerMovement>().transform;
-        playerHealth = player.GetComponent<PlayerHealth>();
-        agent.speed = moveSpeed;
+        capsuleCollider = GetComponent<CapsuleCollider>();
+        bodyColliders = GetComponentsInChildren<Collider>(true);
+        CacheBaseStats();
+    }
 
-        // 풀 매니저 참조
+    void Start()
+    {
+        PlayerMovement playerMovement = FindObjectOfType<PlayerMovement>();
+        if (playerMovement != null)
+        {
+            player = playerMovement.transform;
+            playerHealth = player.GetComponent<PlayerHealth>();
+        }
+
         poolManager = FindObjectOfType<EnemyPoolManager>();
+    }
 
-        // 웨이브 기반 강화 적용
-        int waveNumber = poolManager.waveNumber; // 현재 웨이브 가져오기
-        health += waveNumber * 10;              // 웨이브당 체력 증가
-        moveSpeed += waveNumber * 0.1f;         // 웨이브당 속도 증가
-        attackDamage += waveNumber * 2;         // 웨이브당 공격력 증가
-        agent.speed = moveSpeed;                // 이동 속도 업데이트
+    public void InitializeForSpawn(int waveNumber, bool isBoss)
+    {
+        CacheBaseStats();
+        ResetCombatState();
+
+        health = baseHealth + waveNumber * healthPerWave;
+        moveSpeed = baseMoveSpeed + waveNumber * speedPerWave;
+        attackDamage = baseAttackDamage + waveNumber * damagePerWave;
+
+        if (isBoss)
+        {
+            health += waveNumber * bossHealthPerWave;
+            attackDamage += waveNumber * bossDamagePerWave;
+            moveSpeed += bossSpeedBonus;
+        }
+
+        spawnedAsBoss = isBoss;
+        maxHealth = health;
+        OnHealthChanged?.Invoke(health, maxHealth);
+
+        if (agent != null)
+        {
+            agent.enabled = true;
+            agent.isStopped = false;
+            agent.speed = moveSpeed;
+            agent.ResetPath();
+        }
+
+        SetBodyCollision(true);
+
+        if (animator != null)
+        {
+            animator.SetBool("isDead", false);
+            animator.SetBool("isMoving", false);
+            animator.SetBool("isAttacking", false);
+            animator.SetBool("isIdle", false);
+        }
     }
 
     void Update()
     {
-        if (isDead) return; // 사망 시 동작 중지
+        if (isDead || player == null)
+            return;
 
-        float distance = Vector3.Distance(transform.position, player.position);
+        if (playerHealth != null && playerHealth.currentHealth <= 0)
+            isPlayerDead = true;
 
-        // **플레이어 사망 상태 체크**
-        if (playerHealth.currentHealth <= 0)
+        if (isPlayerDead)
         {
-            isPlayerDead = true; // 플레이어 사망 처리
-        }
-
-        // 플레이어가 죽었으면 동작 멈춤
-        if (isDead || isPlayerDead) // 적 또는 플레이어 사망 시
-        {
-            agent.isStopped = true;
-            animator.SetBool("isMoving", false);
-            animator.SetBool("isAttacking", false);
-            if(!animator.GetBool("isIdle"))
-            animator.SetBool("isIdle", true);
-
-            Debug.Log("Player Dead ");
+            if (agent != null)
+                agent.isStopped = true;
+            if (animator != null)
+            {
+                animator.SetBool("isMoving", false);
+                animator.SetBool("isAttacking", false);
+                if (!animator.GetBool("isIdle"))
+                    animator.SetBool("isIdle", true);
+            }
             return;
         }
-        // 공격 도중에는 회전 고정, 상태 전환 차단
+
         if (isAttacking)
         {
-            transform.rotation = lookRotation; // 공격 도중 회전 고정
+            transform.rotation = lookRotation;
             return;
         }
 
-        // 공격 종료 후 회전 보정
         if (isRotatingAfterAttack)
         {
-            RotateTowardsPlayer(); // 최신 위치로 회전 보정
+            RotateTowardsPlayer();
             return;
         }
 
-        // 체력 체크
         if (health <= 0)
         {
             EnemyDie();
             return;
         }
 
-        // 공격 범위 검사
+        float distance = Vector3.Distance(transform.position, player.position);
         if (distance <= attackRange)
-        {
-            Attack(); // 공격 실행
-        }
+            Attack();
         else
-        {
-            MoveToPlayer(); // 이동 실행
-        }
+            MoveToPlayer();
     }
 
     void Attack()
     {
-        if (!isAttacking) // 재진입 방지
+        if (isAttacking)
+            return;
+
+        isAttacking = true;
+        if (agent != null)
+            agent.isStopped = true;
+
+        targetPosition = player.position;
+        Vector3 direction = (targetPosition - transform.position).normalized;
+        direction.y = 0;
+        lookRotation = Quaternion.LookRotation(direction);
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, rotationSpeed * Time.deltaTime);
+
+        if (animator != null)
         {
-            isAttacking = true; // 공격 상태 고정
-            agent.isStopped = true; // 이동 정지
-
-            // 공격 시 플레이어 위치 고정
-            targetPosition = player.position; // 공격 시작 시 위치 저장
-
-            Vector3 direction =  (targetPosition - transform.position).normalized; // 방향 계산
-            direction.y = 0;
-
-            //lookRotation = Quaternion.LookRotation((targetPosition - transform.position).normalized);
-            lookRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, rotationSpeed * Time.deltaTime);
-            // 공격 방향 고정
-            //transform.rotation = lookRotation;
-
-            // 애니메이션 실행
             animator.SetBool("isAttacking", true);
             animator.SetBool("isMoving", false);
-
-            // 애니메이션 종료 후 처리
-            StartCoroutine(WaitForAttackAnimation());
         }
+
+        attackRoutine = StartCoroutine(WaitForAttackAnimation());
     }
 
-    // 공격 애니메이션 종료까지 대기
     IEnumerator WaitForAttackAnimation()
     {
-        // 현재 애니메이션 상태 정보 가져오기
-        AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-        float animationLength = stateInfo.length;
+        float animationLength = 1f;
+        if (animator != null)
+            animationLength = animator.GetCurrentAnimatorStateInfo(0).length;
 
-        // 애니메이션 종료까지 대기
         yield return new WaitForSeconds(animationLength);
 
-        // 공격 종료 후 회전 보정 활성화
         isRotatingAfterAttack = true;
-
-        // 공격 상태 초기화
         ResetAttack();
+        attackRoutine = null;
     }
 
     void ResetAttack()
     {
-        isAttacking = false; // 상태 초기화
-        animator.SetBool("isAttacking", false);
-        agent.isStopped = false; // 이동 재개
+        isAttacking = false;
+        if (animator != null)
+            animator.SetBool("isAttacking", false);
+        if (agent != null)
+            agent.isStopped = false;
     }
 
-    // 애니메이션 종료 후 회전 처리
     void RotateTowardsTarget()
     {
-        // 공격 방향 유지
         transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 10f);
     }
 
@@ -189,147 +226,282 @@ public class EnemyAI : MonoBehaviour
     {
         Vector3 direction = (player.position - transform.position).normalized;
         Quaternion targetRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
-
-        // 부드러운 회전 처리
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
 
-        // 회전 완료 후 이동으로 전환
         if (Quaternion.Angle(transform.rotation, targetRotation) < 1f)
-        {
-            isRotatingAfterAttack = false; // 회전 종료
-        }
+            isRotatingAfterAttack = false;
     }
-    // 공격 판정 (애니메이션 이벤트에서 호출)
+
     public void HitCheckLeft()
     {
-        CheckHit(leftAttackPoint); // 왼손 타격
-        Debug.Log($"enemy left attack");
+        CheckHit(leftAttackPoint);
     }
 
     public void HitCheckRight()
     {
-        CheckHit(rightAttackPoint); // 오른손 타격
-        Debug.Log($"enemy right attack");
+        CheckHit(rightAttackPoint);
     }
 
     void CheckHit(Transform attackPoint)
     {
+        if (attackPoint == null)
+            return;
+
         Collider[] hitPlayers = Physics.OverlapSphere(attackPoint.position, attackRadius, playerLayer);
-        foreach (Collider player in hitPlayers)
+        foreach (Collider hitCollider in hitPlayers)
         {
-            Debug.Log($"player : {player}");
-            PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
-            if (playerHealth != null)
-            {   
-                playerHealth.TakeDamage(attackDamage); // 데미지 적용
-                Debug.Log("플레이어 피격!");
-            }
+            PlayerHealth targetHealth = hitCollider.GetComponent<PlayerHealth>();
+            if (targetHealth != null)
+                targetHealth.TakeDamage(attackDamage);
         }
     }
-    // 부드러운 회전 처리
+
     IEnumerator SmoothRotate(Quaternion targetRotation)
     {
-        float rotateSpeed = 5f; // 회전 속도
+        float rotateSpeed = 5f;
         while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f)
         {
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotateSpeed);
-            yield return null; // 다음 프레임 대기
+            yield return null;
         }
     }
 
     void MoveToPlayer()
     {
-        isAttacking = false; // 공격 상태 해제
-        agent.isStopped = false; // 이동 재개
-        agent.SetDestination(player.position);
-        Vector3 nextPos = agent.steeringTarget - transform.position;
-
-        if (nextPos != Vector3.zero)
+        isAttacking = false;
+        if (agent != null)
         {
-            Quaternion lookRotation = Quaternion.LookRotation(nextPos.normalized);
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 10f);
-        }
-        // 이동 중에도 방향 업데이트
-        //RotateTowardsPlayer();
+            agent.isStopped = false;
+            agent.SetDestination(player.position);
+            Vector3 nextPos = agent.steeringTarget - transform.position;
 
-        animator.SetBool("isMoving", true);
-        animator.SetBool("isAttacking", false);
+            if (nextPos != Vector3.zero)
+            {
+                Quaternion moveLookRotation = Quaternion.LookRotation(nextPos.normalized);
+                transform.rotation = Quaternion.Slerp(transform.rotation, moveLookRotation, Time.deltaTime * 10f);
+            }
+        }
+
+        if (animator != null)
+        {
+            animator.SetBool("isMoving", true);
+            animator.SetBool("isAttacking", false);
+        }
     }
 
-    // 사망 처리
     void EnemyDie()
     {
-        if (isDead) return;
+        if (isDead)
+            return;
 
         isDead = true;
-        agent.isStopped = true;
         DropItem();
-        int score = 0;
 
-        if (enemyType == "Normal")
+        int score = enemyType == "Normal" ? 100 : 300;
+        if (ScoreManager.Instance != null)
+            ScoreManager.Instance.AddScore(score);
+
+        StopHitStun();
+        CombatHitFeedback.PlayDeathSound(transform.position);
+
+        SetBodyCollision(false);
+        if (agent != null)
         {
-            score = 100;
+            agent.ResetPath();
+            agent.isStopped = true;
+            agent.enabled = false;
         }
-        else
-            score = 300;
-        //점수 추가
-        ScoreManager.Instance.AddScore(score); // 적 사망 시 점수 추가
 
-        GetComponent<CapsuleCollider>().enabled = false; // collider를 비활성화 해서 길 막는 현상 제거
-
-        animator.SetBool("isMoving", false);
-        animator.SetBool("isAttacking", false);
-        animator.SetBool("isDead", true);
+        if (animator != null)
+        {
+            animator.SetBool("isMoving", false);
+            animator.SetBool("isAttacking", false);
+            animator.SetBool("isDead", true);
+        }
 
         StartCoroutine(ReturnToPoolAfterDeath());
-
-        // 이벤트 호출
         OnDeath?.Invoke();
     }
 
     IEnumerator ReturnToPoolAfterDeath()
     {
-        yield return new WaitForSeconds(2f); // 사망 애니메이션 길이만큼 대기
+        yield return new WaitForSeconds(2f);
+        ResetCombatState();
 
-        // 상태 초기화
-        ResetEnemy();
-        //yield return new WaitForSeconds(1f);
-        // 풀로 반환
-        poolManager.ReturnToPool(gameObject, enemyType);
+        if (poolManager != null)
+            poolManager.ReturnToPool(gameObject, enemyType);
+        else
+            gameObject.SetActive(false);
     }
 
-    // 상태 초기화
-    void ResetEnemy()
+    void ResetCombatState()
     {
-        isDead = false;
-        health = 50; // 체력 초기화
-
-        agent.isStopped = false;
-        animator.SetBool("isDead", false);
-        animator.SetBool("isMoving", false);
-        animator.SetBool("isAttacking", false);
-    }
-
-    public void EnemyTakeDamage(int damage)
-    {
-        if (isDead) return;
-
-        health -= damage;
-        if (health < 0)
+        if (attackRoutine != null)
         {
-            health = 0;
-            return;
+            StopCoroutine(attackRoutine);
+            attackRoutine = null;
         }
-        Debug.Log($"Enemy HP : {health}");
+
+        StopHitStun();
+        StopHitFlash();
+
+        isDead = false;
+        isAttacking = false;
+        isRotatingAfterAttack = false;
+        isPlayerDead = false;
+        spawnedAsBoss = false;
+        health = baseHealth;
+        maxHealth = baseHealth;
+        moveSpeed = baseMoveSpeed;
+        attackDamage = baseAttackDamage;
+    }
+
+    void SetBodyCollision(bool enabled)
+    {
+        if (bodyColliders == null)
+            bodyColliders = GetComponentsInChildren<Collider>(true);
+
+        for (int i = 0; i < bodyColliders.Length; i++)
+        {
+            if (bodyColliders[i] != null)
+                bodyColliders[i].enabled = enabled;
+        }
+    }
+
+    public bool EnemyTakeDamage(int damageAmount)
+    {
+        return EnemyTakeDamage(damageAmount, transform.position + Vector3.up, Vector3.up);
+    }
+
+    public bool EnemyTakeDamage(int damageAmount, Vector3 hitPoint, Vector3 hitNormal)
+    {
+        if (isDead)
+            return false;
+
+        health -= damageAmount;
+        if (health < 0)
+            health = 0;
+
+        OnHealthChanged?.Invoke(health, maxHealth);
+
+        bool killed = health <= 0;
+        CombatHitFeedback.PlayBodyFeedback(this, hitPoint, hitNormal, killed);
+        return killed;
+    }
+
+    public void PlayHitFlash(Color flashColor, float duration)
+    {
+        if (duration <= 0f)
+            return;
+
+        if (flashRoutine != null)
+            StopCoroutine(flashRoutine);
+
+        flashRoutine = StartCoroutine(HitFlashRoutine(flashColor, duration));
+    }
+
+    public void PlayHitStun(float duration)
+    {
+        if (isDead || duration <= 0f || agent == null || !agent.enabled)
+            return;
+
+        if (hitStunRoutine != null)
+            StopCoroutine(hitStunRoutine);
+
+        hitStunRoutine = StartCoroutine(HitStunRoutine(duration));
+    }
+
+    IEnumerator HitStunRoutine(float duration)
+    {
+        agent.speed = 0f;
+        yield return new WaitForSeconds(duration);
+        hitStunRoutine = null;
+        if (!isDead && agent != null && agent.enabled)
+            agent.speed = moveSpeed;
+    }
+
+    void StopHitStun()
+    {
+        if (hitStunRoutine != null)
+        {
+            StopCoroutine(hitStunRoutine);
+            hitStunRoutine = null;
+        }
+
+        if (agent != null && agent.enabled)
+            agent.speed = moveSpeed;
+    }
+
+    void StopHitFlash()
+    {
+        if (flashRoutine != null)
+        {
+            StopCoroutine(flashRoutine);
+            flashRoutine = null;
+        }
+
+        ClearHitFlash();
+    }
+
+    IEnumerator HitFlashRoutine(Color flashColor, float duration)
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = 1f - (elapsed / duration);
+            Color emission = flashColor * (2f * t);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] == null)
+                    continue;
+
+                renderers[i].GetPropertyBlock(block);
+                block.SetColor(EmissionColorId, emission);
+                renderers[i].SetPropertyBlock(block);
+            }
+
+            yield return null;
+        }
+
+        flashRoutine = null;
+        ClearHitFlash();
+    }
+
+    void ClearHitFlash()
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null)
+                renderers[i].SetPropertyBlock(null);
+        }
     }
 
     void DropItem()
     {
-        if (Random.value < dropChance && dropItems.Length > 0) // 확률 체크
+        if (dropItems == null || dropItems.Length == 0)
+            return;
+
+        if (Random.value < dropChance)
         {
             int randomIndex = Random.Range(0, dropItems.Length);
-            Instantiate(dropItems[randomIndex], transform.position, Quaternion.identity); // 랜덤 아이템 드랍
+            Instantiate(dropItems[randomIndex], transform.position, Quaternion.identity);
         }
+    }
+
+    void CacheBaseStats()
+    {
+        if (hasCachedBaseStats)
+            return;
+
+        baseHealth = health;
+        baseMoveSpeed = moveSpeed;
+        baseAttackDamage = attackDamage;
+        hasCachedBaseStats = true;
     }
 
     void OnDrawGizmosSelected()
@@ -346,6 +518,4 @@ public class EnemyAI : MonoBehaviour
             Gizmos.DrawWireSphere(rightAttackPoint.position, attackRadius);
         }
     }
-
- 
 }

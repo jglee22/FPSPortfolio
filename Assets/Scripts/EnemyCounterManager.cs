@@ -6,10 +6,10 @@ using TMPro;
 
 public class EnemyCounterManager : MonoBehaviour
 {
-    public static EnemyCounterManager Instance; // ½Ì±ÛÅæ ÀÎ½ºÅÏ½º
+    public static EnemyCounterManager Instance; // ì‹±ê¸€í†¤ ì¸ìŠ¤í„´ìŠ¤
 
-    public int enemyCount = 0;                  // ÇöÀç Àû ¼ö
-    public TextMeshProUGUI enemyCountText;      // UI Ç¥½Ã¿ë ÅØ½ºÆ®
+    public int enemyCount = 0;                  // í˜„ì¬ ì  ìˆ˜
+    public TextMeshProUGUI enemyCountText;      // UI í‘œì‹œìš© í…ìŠ¤íŠ¸
 
     private void Awake()
     {
@@ -30,21 +30,21 @@ public class EnemyCounterManager : MonoBehaviour
 
     public void AddEnemy()
     {
-        enemyCount++;            // Àû ¼ö Áõ°¡
-        UpdateEnemyCountUI();    // UI ¾÷µ¥ÀÌÆ®
+        enemyCount++;            // ì  ìˆ˜ ì¦ê°€
+        UpdateEnemyCountUI();    // UI ì—…ë°ì´íŠ¸
     }
 
     public void RemoveEnemy()
     {
-        enemyCount--;            // Àû ¼ö °¨¼Ò
-        UpdateEnemyCountUI();    // UI ¾÷µ¥ÀÌÆ®
+        enemyCount--;            // ì  ìˆ˜ ê°ì†Œ
+        UpdateEnemyCountUI();    // UI ì—…ë°ì´íŠ¸
     }
 
     void UpdateEnemyCountUI()
     {
         if (enemyCountText != null)
         {
-            enemyCountText.text = "Enemies: " + enemyCount;
+            enemyCountText.text = "ì  " + enemyCount;
         }
     }
 }

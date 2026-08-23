@@ -1,30 +1,47 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 using DG.Tweening;
+
 public class MenuManager : MonoBehaviour
 {
-    public GameObject pauseMenuUI; // ¿œΩ√¡§¡ˆ ∏ﬁ¥∫
-    public Image fadeImage;        // ∆‰¿ÃµÂ »ø∞˙øÎ ¿ÃπÃ¡ˆ
-    public Button resumeButton;    // ¿œΩ√ ¡§¡ˆ «ÿ¡¶ πˆ∆∞
-    public Button lobbyButton;     // ∑Œ∫Òæ¿ ¿Ãµø πˆ∆∞
-    public Button quitButton;      // ¡æ∑· πˆ∆∞
-    private bool isPaused = false; // ∞‘¿”¿Ã ¿œΩ√¡§¡ˆ ªÛ≈¬¿Œ¡ˆ »Æ¿Œ
+    public GameObject pauseMenuUI;
+    public Image fadeImage;
+    public Button resumeButton;
+    public Button lobbyButton;
+    public Button quitButton;
+    public TMP_FontAsset uiFont;
+    public string mainSceneName = "Main";
+    public string lobbySceneName = "Lobby";
+    public float gameOverDelay = 0.75f;
+    public string gameOverTitle = "GAME OVER";
+    public string retryButtonLabel = "Îã§Ïãú ÏãúÏûë";
+    public string lobbyButtonLabel = "Î°úÎπÑ Ïù¥Îèô";
+    public string newBestLabel = "Ïã†Í∏∞Î°ù";
 
-    // Start is called before the first frame update
+    bool isPaused;
+    bool isGameOver;
+    bool isLeavingScene;
+    GameObject gameOverPanel;
+    TextMeshProUGUI gameOverScoreText;
+    TextMeshProUGUI gameOverHighScoreText;
+    TextMeshProUGUI newBestText;
+
     void Start()
     {
         resumeButton.onClick.AddListener(ResumeGame);
         lobbyButton.onClick.AddListener(GoToLobby);
         quitButton.onClick.AddListener(QuitGame);
+        CreateGameOverPanel();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        // ESC ≈∞∑Œ ¿œΩ√¡§¡ˆ ≈‰±€
+        if (isGameOver || isLeavingScene)
+            return;
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (isPaused)
@@ -36,74 +53,226 @@ public class MenuManager : MonoBehaviour
 
     public void PauseGame()
     {
-        // ∏ﬁ¥∫ »∞º∫»≠ π◊ ∞‘¿” ¡§¡ˆ
-        //pauseMenuUI.SetActive(true);
-        if (GetComponentInParent<CanvasGroup>() != null)
-        {
-            CanvasGroup canvasGroup = GetComponentInParent<CanvasGroup>();
+        if (isGameOver)
+            return;
 
-            canvasGroup.alpha = 1f; // πˆ∆∞ «•Ω√
-            canvasGroup.interactable = true; // ≈¨∏Ø ∞°¥…
-            canvasGroup.blocksRaycasts = true; // UI ≈¨∏Ø ∞°¥…
-        }
-        Time.timeScale = 0f; // ¿œΩ√ ¡§¡ˆ
-        Cursor.lockState = CursorLockMode.None; // ƒøº≠ ¿·±› «ÿ¡¶
-        Cursor.visible = true; // ƒøº≠ »∞º∫»≠
+        SetMenuCanvasVisible(true);
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(true);
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(false);
+
+        Time.timeScale = 0f;
+        SetCursorVisible(true);
         isPaused = true;
     }
 
     public void ResumeGame()
     {
-        // ∏ﬁ¥∫ ∫Ò»∞º∫»≠ π◊ ∞‘¿” ¿Á∞≥
-        //pauseMenuUI.SetActive(false);
-        if (GetComponentInParent<CanvasGroup>() != null)
-        {
-            CanvasGroup canvasGroup = GetComponentInParent<CanvasGroup>();
+        if (isGameOver)
+            return;
 
-            canvasGroup.alpha = 0f; // πˆ∆∞ º˚±Ë
-            canvasGroup.interactable = false; // ≈¨∏Ø ∫“∞°
-            canvasGroup.blocksRaycasts = false; // UI ≈¨∏Ø ¬˜¥‹
-        }
+        SetMenuCanvasVisible(false);
         Time.timeScale = 1f;
-        Cursor.lockState = CursorLockMode.Locked; // ƒøº≠ ¿·±› º≥¡§
-        Cursor.visible = false;
+        SetCursorVisible(false);
         isPaused = false;
+    }
+
+    public void ShowGameOver()
+    {
+        if (isGameOver)
+            return;
+
+        isGameOver = true;
+        StartCoroutine(ShowGameOverRoutine());
     }
 
     public void GoToLobby()
     {
-        Time.timeScale = 1f; // Ω√∞£ ¿Á∞≥
-        // ∆‰¿ÃµÂ æ∆øÙ »ƒ ∑Œ∫Ò æ¿¿∏∑Œ ¿Ãµø
-        fadeImage.gameObject.SetActive(true);
-        fadeImage.color = new Color(0, 0, 0, 0); // ≈ı∏Ì«œ∞‘ Ω√¿€
-        fadeImage.DOFade(1, 1f).OnComplete(() =>
-        {
-            SceneManager.LoadScene("Lobby"); // ∑Œ∫Ò æ¿ ¿Ãµø
-        });
+        LoadSceneWithFade(lobbySceneName);
+    }
+
+    public void RetryGame()
+    {
+        LoadSceneWithFade(mainSceneName);
     }
 
     public void QuitGame()
     {
-        // ∞‘¿” ¡æ∑·
-        Debug.Log("∞‘¿” ¡æ∑·");
-#if UNITY_EDITOR || UNITY_STANDALONE //EditorøÕ PC ∫ÙµÂ¿œ∂ß¿« «√∑ß∆˚
-        Time.timeScale = 1f; // Ω√∞£ ¿Á∞≥
-        // ∆‰¿ÃµÂ æ∆øÙ »ƒ ∑Œ∫Ò æ¿¿∏∑Œ ¿Ãµø
+        if (isLeavingScene)
+            return;
+
+        isLeavingScene = true;
+        Time.timeScale = 1f;
         fadeImage.gameObject.SetActive(true);
-        fadeImage.color = new Color(0, 0, 0, 0); // ≈ı∏Ì«œ∞‘ Ω√¿€
-        fadeImage.DOFade(1, 1f).OnComplete(() =>
+        fadeImage.transform.SetAsLastSibling();
+        fadeImage.color = new Color(0f, 0f, 0f, 0f);
+        fadeImage.DOFade(1f, 1f).OnComplete(() =>
         {
+#if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
-        });
-#else   //Android / IOS µÓ EditorøÕ PC ∫ÙµÂ∞° æ∆¥— «√∑ß∆˚
-        Time.timeScale = 1f; // Ω√∞£ ¿Á∞≥
-        // ∆‰¿ÃµÂ æ∆øÙ »ƒ ¡æ∑·
-        fadeImage.gameObject.SetActive(true);
-        fadeImage.color = new Color(0, 0, 0, 0); // ≈ı∏Ì«œ∞‘ Ω√¿€
-        fadeImage.DOFade(1, 1f).OnComplete(() =>
-        {
+#else
             Application.Quit();
-        });
 #endif
+        });
+    }
+
+    IEnumerator ShowGameOverRoutine()
+    {
+        yield return new WaitForSecondsRealtime(gameOverDelay);
+
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(false);
+
+        RefreshGameOverScore();
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(true);
+
+        SetMenuCanvasVisible(true);
+        Time.timeScale = 0f;
+        SetCursorVisible(true);
+    }
+
+    void LoadSceneWithFade(string sceneName)
+    {
+        if (isLeavingScene)
+            return;
+
+        isLeavingScene = true;
+        Time.timeScale = 1f;
+        fadeImage.gameObject.SetActive(true);
+        fadeImage.transform.SetAsLastSibling();
+        fadeImage.color = new Color(0f, 0f, 0f, 0f);
+        fadeImage.DOFade(1f, 1f).OnComplete(() =>
+        {
+            SceneManager.LoadScene(sceneName);
+        });
+    }
+
+    void RefreshGameOverScore()
+    {
+        int score = 0;
+        int highScore = 0;
+        bool isNewBest = false;
+
+        if (ScoreManager.Instance != null)
+        {
+            score = ScoreManager.Instance.score;
+            highScore = ScoreManager.Instance.highScore;
+            isNewBest = ScoreManager.Instance.HasNewHighScore;
+        }
+
+        if (gameOverScoreText != null)
+            gameOverScoreText.text = "ÌòÑÏû¨ Ï†êÏàò : " + score;
+        if (gameOverHighScoreText != null)
+            gameOverHighScoreText.text = "ÏµúÍ≥† Ï†êÏàò : " + highScore;
+        if (newBestText != null)
+            newBestText.gameObject.SetActive(isNewBest);
+    }
+
+    void CreateGameOverPanel()
+    {
+        if (uiFont == null && ScoreManager.Instance != null && ScoreManager.Instance.scoreText != null)
+            uiFont = ScoreManager.Instance.scoreText.font;
+
+        gameOverPanel = CreateUiObject("GameOverPanel", transform);
+        RectTransform panelRect = gameOverPanel.GetComponent<RectTransform>();
+        StretchFull(panelRect);
+        Image overlay = gameOverPanel.AddComponent<Image>();
+        overlay.color = new Color(0f, 0f, 0f, 0.78f);
+        overlay.raycastTarget = true;
+        gameOverPanel.SetActive(false);
+
+        CreateLabel("Title", gameOverPanel.transform, gameOverTitle, 92f, new Vector2(0f, 220f), new Vector2(900f, 120f));
+        gameOverScoreText = CreateLabel("Score", gameOverPanel.transform, "ÌòÑÏû¨ Ï†êÏàò : 0", 42f, new Vector2(0f, 80f), new Vector2(800f, 60f));
+        gameOverHighScoreText = CreateLabel("HighScore", gameOverPanel.transform, "ÏµúÍ≥† Ï†êÏàò : 0", 36f, new Vector2(0f, 20f), new Vector2(800f, 50f));
+        newBestText = CreateLabel("NewBest", gameOverPanel.transform, newBestLabel, 32f, new Vector2(0f, -40f), new Vector2(400f, 40f));
+        newBestText.color = new Color(1f, 0.78f, 0.25f, 1f);
+        newBestText.gameObject.SetActive(false);
+
+        Button retry = CreateMenuButton("RetryButton", gameOverPanel.transform, retryButtonLabel, new Vector2(0f, -150f));
+        retry.onClick.AddListener(RetryGame);
+
+        Button lobby = CreateMenuButton("LobbyButton", gameOverPanel.transform, lobbyButtonLabel, new Vector2(0f, -260f));
+        lobby.onClick.AddListener(GoToLobby);
+    }
+
+    TextMeshProUGUI CreateLabel(string name, Transform parent, string text, float fontSize, Vector2 position, Vector2 size)
+    {
+        GameObject labelObject = CreateUiObject(name, parent);
+        RectTransform rect = labelObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+
+        TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
+        if (uiFont != null)
+            label.font = uiFont;
+        label.text = text;
+        label.fontSize = fontSize;
+        label.alignment = TextAlignmentOptions.Center;
+        label.color = Color.white;
+        label.raycastTarget = false;
+        return label;
+    }
+
+    Button CreateMenuButton(string name, Transform parent, string label, Vector2 position)
+    {
+        GameObject buttonObject = CreateUiObject(name, parent);
+        RectTransform rect = buttonObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = new Vector2(320f, 80f);
+
+        Image image = buttonObject.AddComponent<Image>();
+        image.color = new Color(0.12f, 0.12f, 0.12f, 0.92f);
+
+        Button button = buttonObject.AddComponent<Button>();
+        ColorBlock colors = button.colors;
+        colors.highlightedColor = new Color(0.25f, 0.25f, 0.25f, 1f);
+        colors.pressedColor = new Color(0.08f, 0.08f, 0.08f, 1f);
+        button.colors = colors;
+
+        CreateLabel(name + "Label", buttonObject.transform, label, 34f, Vector2.zero, Vector2.zero);
+        RectTransform labelRect = buttonObject.transform.GetChild(0).GetComponent<RectTransform>();
+        StretchFull(labelRect);
+        return button;
+    }
+
+    GameObject CreateUiObject(string name, Transform parent)
+    {
+        GameObject uiObject = new GameObject(name, typeof(RectTransform));
+        uiObject.layer = gameObject.layer;
+        uiObject.transform.SetParent(parent, false);
+        return uiObject;
+    }
+
+    void StretchFull(RectTransform rect)
+    {
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+    }
+
+    void SetMenuCanvasVisible(bool visible)
+    {
+        CanvasGroup canvasGroup = GetComponentInParent<CanvasGroup>();
+        if (canvasGroup == null)
+            return;
+
+        canvasGroup.alpha = visible ? 1f : 0f;
+        canvasGroup.interactable = visible;
+        canvasGroup.blocksRaycasts = visible;
+    }
+
+    void SetCursorVisible(bool visible)
+    {
+        Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = visible;
     }
 }

@@ -1,39 +1,78 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
-using UnityEngine.AI;
+using DG.Tweening;
+
 public class EnemyPoolManager : MonoBehaviour
 {
-    [System.Serializable] // 적 종류별 데이터 관리
+    [System.Serializable]
     public class EnemyType
     {
-        public string name;            // 적 이름
-        public GameObject prefab;      // 적 프리팹
-        public int poolSize = 10;      // 초기 풀 크기
+        public string name;
+        public GameObject prefab;
+        public int poolSize = 10;
         public bool isBoss = false;
     }
 
     public Transform enemyContainer;
-    public EnemyType[] enemyTypes;     // 적 종류 배열
-    public Transform[] spawnPoints;    // 스폰 위치 배열
+    public EnemyType[] enemyTypes;
+    public Transform[] spawnPoints;
 
     public int waveNumber = 1;
     public int enemiesPerWave = 5;
-    private int enemiesSpawned = 0;
+    public int bossWaveInterval = 3;
+    public TextMeshProUGUI waveText;
+    public float waveDelay = 5f;
+    public float waveClearBannerDuration = 1.8f;
+    public float waveStartBannerDuration = 1.8f;
+    public float waveBannerFontSize = 88f;
+    public float waveBannerPunchScale = 1.12f;
+    public string waveClearFormat = "WAVE {0} CLEAR";
+    public string waveStartFormat = "WAVE {0}";
+    public string bossWarningText = "WARNING";
+    public string bossWaveStartText = "BOSS WAVE";
+    public Color waveBannerColor = Color.white;
+    public Color bossBannerColor = new Color(1f, 0.28f, 0.22f, 1f);
+    public string bossHealthLabel = "BOSS";
+    public string bossHealthFormat = "{0} / {1}";
+    public Vector2 bossHealthBarOffset = new Vector2(0f, -24f);
+    public Vector2 bossHealthBarSize = new Vector2(1000f, 84f);
+    public float bossHealthFillHeight = 42f;
+    public float bossHealthLabelSize = 36f;
+    public float bossHealthValueSize = 36f;
+    public Color bossHealthBackColor = new Color(0.08f, 0.08f, 0.08f, 0.82f);
+    public float hudTextOutlineWidth = 0.25f;
+    public Color hudTextOutlineColor = new Color(0f, 0f, 0f, 0.9f);
 
+    [Header("Test")]
+    public bool spawnBossOnStart = false;
+    public bool spawnTestBoss = false;
 
-    public TextMeshProUGUI waveText;        // 웨이브 상태 표시 UI
-    public float waveDelay = 5f; // 웨이브 간 대기 시간
-    private bool isWaveActive = false; // 웨이브 진행 여부 확인
-    private int enemiesAlive = 0; // 현재 살아있는 적 수
-
-    private Dictionary<string, Queue<GameObject>> enemyPools; // 적 풀 관리 딕셔너리
+    private bool isWaveActive = false;
+    private int startWaveNumber;
+    private int enemiesAlive = 0;
+    private PlayerHealth playerHealth;
+    private Dictionary<string, Queue<GameObject>> enemyPools;
+    private TextMeshProUGUI bannerText;
+    private CanvasGroup bannerGroup;
+    private Tween bannerTween;
+    private Coroutine nextWaveRoutine;
+    private EnemyAI currentBoss;
+    private GameObject bossHealthRoot;
+    private Image bossHealthFill;
+    private TextMeshProUGUI bossHealthText;
+    private TextMeshProUGUI bossHealthNameText;
 
     void Start()
     {
-        // 초기화
+        startWaveNumber = waveNumber;
         enemyPools = new Dictionary<string, Queue<GameObject>>();
+        playerHealth = FindObjectOfType<PlayerHealth>();
+        CreateWaveBanner();
+        CreateBossHealthBar();
+        ApplyCanvasHudOutlines();
 
         foreach (EnemyType enemyType in enemyTypes)
         {
@@ -46,77 +85,120 @@ public class EnemyPoolManager : MonoBehaviour
             }
             enemyPools[enemyType.name] = pool;
         }
-        SpawnWave();         // 웨이브 시작
-        UpdateWaveUI();      // UI 업데이트
-        isWaveActive = true; // 웨이브 활성화 추가
+
+        SpawnWave();
+        UpdateWaveUI();
+        isWaveActive = true;
+        ShowWaveStartBanner();
     }
+
     void Update()
     {
-        // 적이 모두 처치되었고, 웨이브가 활성 상태이면 다음 웨이브 시작
-        if (isWaveActive && enemiesAlive <= 0)
+        if (spawnTestBoss)
         {
-            StartCoroutine(StartNextWave());
+            spawnTestBoss = false;
+            SpawnTestBoss();
         }
+
+        if (IsPlayerDead())
+            return;
+
+        if (isWaveActive && enemiesAlive <= 0 && nextWaveRoutine == null)
+            nextWaveRoutine = StartCoroutine(StartNextWave());
     }
 
     IEnumerator StartNextWave()
     {
-        isWaveActive = false; // 웨이브 종료 처리
-        yield return new WaitForSeconds(waveDelay); // 대기 시간 추가
+        isWaveActive = false;
+        int clearedWave = waveNumber;
+        bool nextIsBoss = IsBossWave(clearedWave + 1);
 
-        waveNumber++; // 웨이브 수 증가
-        enemiesPerWave += 2; // 웨이브마다 적 수 증가
+        ShowBanner(string.Format(waveClearFormat, clearedWave), waveBannerColor, waveClearBannerDuration);
 
-        // **적 강화 적용**
-        foreach (EnemyType enemyType in enemyTypes)
+        if (nextIsBoss && waveClearBannerDuration < waveDelay)
         {
-            enemyType.poolSize += 5; // 웨이브마다 풀 크기 확장
+            yield return WaitUnlessDead(waveClearBannerDuration);
+            if (IsPlayerDead())
+            {
+                nextWaveRoutine = null;
+                yield break;
+            }
+
+            ShowBanner(bossWarningText, bossBannerColor, waveDelay - waveClearBannerDuration);
+            yield return WaitUnlessDead(waveDelay - waveClearBannerDuration);
+        }
+        else
+        {
+            yield return WaitUnlessDead(waveDelay);
         }
 
-        SpawnWave(); // 새로운 웨이브 시작
-        isWaveActive = true; // 웨이브 활성화
-        UpdateWaveUI(); // UI 업데이트
+        if (IsPlayerDead())
+        {
+            nextWaveRoutine = null;
+            yield break;
+        }
+
+        waveNumber++;
+        enemiesPerWave += 2;
+
+        foreach (EnemyType enemyType in enemyTypes)
+            enemyType.poolSize += 5;
+
+        SpawnWave();
+        isWaveActive = true;
+        UpdateWaveUI();
+        ShowWaveStartBanner();
+        nextWaveRoutine = null;
     }
+
+    IEnumerator WaitUnlessDead(float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (IsPlayerDead())
+                yield break;
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
     void SpawnWave()
     {
         for (int i = 0; i < enemiesPerWave; i++)
         {
-            if (waveNumber % 3 == 0 && i == enemiesPerWave - 1) // 3웨이브마다 마지막 적을 보스로 변경
-            {
-                SpawnEnemy(true); // 보스 소환
-            }
-            else
-            {
-                SpawnEnemy(false); // 일반 적 소환
-            }
+            bool spawnBoss = IsBossWave(waveNumber) && i == enemiesPerWave - 1;
+            SpawnEnemy(spawnBoss);
         }
-        enemiesAlive = enemiesPerWave; // 살아 있는 적 수 초기화
+
+        enemiesAlive = enemiesPerWave;
     }
 
     void SpawnEnemy(bool isBoss)
     {
         EnemyType selectedEnemy;
 
-        if (isBoss) // 보스 소환
+        if (isBoss)
         {
-            selectedEnemy = System.Array.Find(enemyTypes, e => e.isBoss); // 보스 타입 찾기
+            selectedEnemy = System.Array.Find(enemyTypes, e => e.isBoss);
+            if (selectedEnemy == null)
+                selectedEnemy = enemyTypes[0];
         }
         else
         {
             int enemyTypeIndex = Random.Range(0, enemyTypes.Length);
             selectedEnemy = enemyTypes[enemyTypeIndex];
-            while (selectedEnemy.isBoss) // 일반 적 중 선택
+            int attempts = 0;
+            while (selectedEnemy.isBoss && attempts < enemyTypes.Length)
             {
-                enemyTypeIndex = Random.Range(0, enemyTypes.Length);
+                enemyTypeIndex = (enemyTypeIndex + 1) % enemyTypes.Length;
                 selectedEnemy = enemyTypes[enemyTypeIndex];
+                attempts++;
             }
         }
 
-        // 풀 크기 동적 확장
         if (enemyPools[selectedEnemy.name].Count == 0)
-        {
             ExpandPool(selectedEnemy);
-        }
 
         int spawnIndex = Random.Range(0, spawnPoints.Length);
         Transform spawnPoint = spawnPoints[spawnIndex];
@@ -124,64 +206,310 @@ public class EnemyPoolManager : MonoBehaviour
         GameObject enemy = enemyPools[selectedEnemy.name].Dequeue();
         enemy.transform.position = spawnPoint.position;
         enemy.transform.rotation = spawnPoint.rotation;
-        enemy.GetComponent<CapsuleCollider>().enabled = true;
         enemy.SetActive(true);
 
-        // 적 추가
-        EnemyCounterManager.Instance.AddEnemy(); // 적 생성 시 카운트 증가
+        if (EnemyCounterManager.Instance != null)
+            EnemyCounterManager.Instance.AddEnemy();
 
-        // 적 초기화 및 사망 시 콜백 연결
         EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
         if (enemyAI != null)
         {
             enemyAI.enemyType = selectedEnemy.name;
-            enemyAI.EnemyTakeDamage(0);
-
-            // 기존 이벤트 제거 후 새 이벤트 연결
+            enemyAI.InitializeForSpawn(waveNumber, isBoss);
             enemyAI.OnDeath -= EnemyDied;
             enemyAI.OnDeath += EnemyDied;
 
-            // **보스 강화 설정 추가**
             if (isBoss)
-            {
-                enemyAI.health += waveNumber * 20;     // 더 높은 체력
-                enemyAI.attackDamage += waveNumber * 5; // 더 높은 공격력
-                enemyAI.moveSpeed += 0.5f;            // 더 빠른 속도
-            }
+                ShowBossHealth(enemyAI);
         }
     }
 
-    // 풀 확장 함수 추가
     void ExpandPool(EnemyType enemyType)
     {
-        for (int i = 0; i < 5; i++) // 부족 시 5개씩 추가
+        for (int i = 0; i < 5; i++)
         {
             GameObject enemy = Instantiate(enemyType.prefab, enemyContainer);
             enemy.SetActive(false);
             enemyPools[enemyType.name].Enqueue(enemy);
         }
-        Debug.Log($"{enemyType.name} 풀 확장! 새 크기: {enemyPools[enemyType.name].Count}");
     }
 
     void UpdateWaveUI()
     {
-        if (waveText != null)
-        {
-            waveText.text = $"Wave: {waveNumber}";
-            Debug.Log($"웨이브 업데이트: {waveNumber}");
-        }
+        if (waveText == null)
+            return;
+
+        waveText.text = string.Format(waveStartFormat, waveNumber);
     }
+
+    void ShowWaveStartBanner()
+    {
+        if (IsBossWave(waveNumber))
+            ShowBanner(bossWaveStartText, bossBannerColor, waveStartBannerDuration);
+        else
+            ShowBanner(string.Format(waveStartFormat, waveNumber), waveBannerColor, waveStartBannerDuration);
+    }
+
+    bool IsBossWave(int wave)
+    {
+        if (spawnBossOnStart && wave == startWaveNumber)
+            return true;
+
+        return bossWaveInterval > 0 && wave > 0 && wave % bossWaveInterval == 0;
+    }
+
+    [ContextMenu("Spawn Test Boss")]
+    public void SpawnTestBoss()
+    {
+        if (enemyPools == null || enemyTypes == null || enemyTypes.Length == 0)
+            return;
+
+        if (spawnPoints == null || spawnPoints.Length == 0)
+            return;
+
+        if (IsPlayerDead())
+            return;
+
+        SpawnEnemy(true);
+        enemiesAlive++;
+    }
+
+    bool IsPlayerDead()
+    {
+        return playerHealth != null && playerHealth.isPlayerDie;
+    }
+
     void EnemyDied()
     {
         enemiesAlive--;
-        EnemyCounterManager.Instance.RemoveEnemy(); //적 카운트
-        Debug.Log($"적 사망. 남은 적: {enemiesAlive}");
+        if (EnemyCounterManager.Instance != null)
+            EnemyCounterManager.Instance.RemoveEnemy();
     }
-    // 풀로 반환
+
     public void ReturnToPool(GameObject enemy, string type)
     {
         enemy.SetActive(false);
         enemyPools[type].Enqueue(enemy);
-        Debug.Log($"{type} 반환. 현재 풀 크기: {enemyPools[type].Count}");
+    }
+
+    void ShowBanner(string message, Color color, float duration)
+    {
+        if (bannerText == null || bannerGroup == null)
+            return;
+
+        bannerTween?.Kill();
+        bannerText.text = message;
+        bannerText.color = color;
+        bannerGroup.alpha = 0f;
+        bannerText.transform.localScale = Vector3.one * 0.86f;
+
+        float hold = Mathf.Max(0.35f, duration - 0.7f);
+        bannerTween = DOTween.Sequence()
+            .Append(bannerGroup.DOFade(1f, 0.18f))
+            .Join(bannerText.transform.DOScale(waveBannerPunchScale, 0.22f).SetEase(Ease.OutBack))
+            .Append(bannerText.transform.DOScale(1f, 0.12f).SetEase(Ease.OutQuad))
+            .AppendInterval(hold)
+            .Append(bannerGroup.DOFade(0f, 0.4f))
+            .Join(bannerText.transform.DOScale(1.08f, 0.4f).SetEase(Ease.InQuad));
+    }
+
+    void CreateWaveBanner()
+    {
+        if (waveText == null)
+            return;
+
+        Transform canvasTransform = waveText.canvas != null ? waveText.canvas.transform : waveText.transform.parent;
+        GameObject bannerObject = new GameObject("WaveBanner");
+        bannerObject.transform.SetParent(canvasTransform, false);
+        bannerObject.transform.SetAsLastSibling();
+
+        RectTransform rect = bannerObject.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(1400f, 180f);
+
+        bannerGroup = bannerObject.AddComponent<CanvasGroup>();
+        bannerGroup.alpha = 0f;
+        bannerGroup.blocksRaycasts = false;
+        bannerGroup.interactable = false;
+
+        bannerText = bannerObject.AddComponent<TextMeshProUGUI>();
+        bannerText.font = waveText.font;
+        bannerText.fontSize = waveBannerFontSize;
+        bannerText.alignment = TextAlignmentOptions.Center;
+        bannerText.raycastTarget = false;
+        bannerText.fontStyle = FontStyles.Bold;
+        ApplyHudOutline(bannerText);
+    }
+
+    void CreateBossHealthBar()
+    {
+        if (waveText == null)
+            return;
+
+        Transform canvasTransform = waveText.canvas != null ? waveText.canvas.transform : waveText.transform.parent;
+        bossHealthRoot = new GameObject("BossHealth");
+        bossHealthRoot.layer = waveText.gameObject.layer;
+        bossHealthRoot.transform.SetParent(canvasTransform, false);
+        bossHealthRoot.transform.SetAsLastSibling();
+
+        RectTransform rootRect = bossHealthRoot.AddComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(0.5f, 1f);
+        rootRect.anchorMax = new Vector2(0.5f, 1f);
+        rootRect.pivot = new Vector2(0.5f, 1f);
+        rootRect.anchoredPosition = bossHealthBarOffset;
+        rootRect.sizeDelta = bossHealthBarSize;
+
+        CanvasGroup group = bossHealthRoot.AddComponent<CanvasGroup>();
+        group.blocksRaycasts = false;
+        group.interactable = false;
+
+        bossHealthNameText = CreateBossLabel("Label", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, 40f), bossHealthLabelSize, TextAlignmentOptions.Bottom);
+        bossHealthNameText.text = bossHealthLabel;
+        bossHealthNameText.color = bossBannerColor;
+
+        GameObject barObject = CreateBossChild("Bar");
+        RectTransform barRect = barObject.GetComponent<RectTransform>();
+        barRect.anchorMin = new Vector2(0f, 0f);
+        barRect.anchorMax = new Vector2(1f, 0f);
+        barRect.pivot = new Vector2(0.5f, 0f);
+        barRect.anchoredPosition = Vector2.zero;
+        barRect.sizeDelta = new Vector2(0f, bossHealthFillHeight);
+
+        Image barBackground = barObject.AddComponent<Image>();
+        barBackground.color = bossHealthBackColor;
+        barBackground.raycastTarget = false;
+
+        GameObject fillObject = CreateBossChild("Fill", barObject.transform);
+        RectTransform fillRect = fillObject.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = new Vector2(2f, 2f);
+        fillRect.offsetMax = new Vector2(-2f, -2f);
+
+        bossHealthFill = fillObject.AddComponent<Image>();
+        bossHealthFill.color = bossBannerColor;
+        bossHealthFill.raycastTarget = false;
+
+        bossHealthText = CreateBossLabel("Value", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, bossHealthValueSize, TextAlignmentOptions.Center, barObject.transform);
+
+        bossHealthRoot.SetActive(false);
+    }
+
+    GameObject CreateBossChild(string name, Transform parent = null)
+    {
+        GameObject child = new GameObject(name, typeof(RectTransform));
+        child.layer = bossHealthRoot.layer;
+        child.transform.SetParent(parent != null ? parent : bossHealthRoot.transform, false);
+        return child;
+    }
+
+    TextMeshProUGUI CreateBossLabel(string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 position, Vector2 size, float fontSize, TextAlignmentOptions alignment, Transform parent = null)
+    {
+        GameObject labelObject = CreateBossChild(name, parent);
+        RectTransform rect = labelObject.GetComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.pivot = pivot;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+
+        TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
+        if (waveText != null)
+            label.font = waveText.font;
+        label.fontSize = fontSize;
+        label.alignment = alignment;
+        label.color = Color.white;
+        label.raycastTarget = false;
+        label.enableWordWrapping = false;
+        ApplyHudOutline(label);
+        return label;
+    }
+
+    void ShowBossHealth(EnemyAI boss)
+    {
+        if (boss == null || bossHealthRoot == null || !boss.IsBoss)
+            return;
+
+        HideBossHealthBindings();
+        currentBoss = boss;
+        currentBoss.OnHealthChanged += UpdateBossHealthBar;
+        currentBoss.OnDeath += OnBossDied;
+
+        bossHealthRoot.SetActive(true);
+        if (bossHealthNameText != null)
+            bossHealthNameText.text = bossHealthLabel;
+
+        UpdateBossHealthBar(currentBoss.CurrentHealth, currentBoss.MaxHealth);
+    }
+
+    void UpdateBossHealthBar(int current, int max)
+    {
+        float ratio = max > 0 ? Mathf.Clamp01((float)current / max) : 0f;
+        if (bossHealthFill != null)
+        {
+            bossHealthFill.gameObject.SetActive(ratio > 0f);
+            RectTransform fillRect = bossHealthFill.rectTransform;
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = new Vector2(ratio, 1f);
+            fillRect.offsetMin = new Vector2(2f, 2f);
+            fillRect.offsetMax = new Vector2(-2f, -2f);
+        }
+
+        if (bossHealthText != null)
+            bossHealthText.text = string.Format(bossHealthFormat, current, max);
+    }
+
+    void OnBossDied()
+    {
+        HideBossHealth();
+    }
+
+    void HideBossHealth()
+    {
+        HideBossHealthBindings();
+
+        if (bossHealthRoot != null)
+            bossHealthRoot.SetActive(false);
+    }
+
+    void HideBossHealthBindings()
+    {
+        if (currentBoss != null)
+        {
+            currentBoss.OnHealthChanged -= UpdateBossHealthBar;
+            currentBoss.OnDeath -= OnBossDied;
+            currentBoss = null;
+        }
+    }
+
+    void ApplyCanvasHudOutlines()
+    {
+        if (waveText == null || waveText.canvas == null)
+            return;
+
+        TextMeshProUGUI[] labels = waveText.canvas.GetComponentsInChildren<TextMeshProUGUI>(false);
+        for (int i = 0; i < labels.Length; i++)
+            ApplyHudOutline(labels[i]);
+    }
+
+    void ApplyHudOutline(TextMeshProUGUI label)
+    {
+        if (label == null || label.font == null || label.fontSharedMaterial == null)
+            return;
+
+        label.outlineWidth = hudTextOutlineWidth;
+        label.outlineColor = hudTextOutlineColor;
+        label.fontMaterial.EnableKeyword("OUTLINE_ON");
+        label.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, hudTextOutlineWidth);
+        label.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, hudTextOutlineColor);
+    }
+
+    void OnDestroy()
+    {
+        bannerTween?.Kill();
+        HideBossHealthBindings();
     }
 }

@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using System.IO;
@@ -7,18 +5,21 @@ using System.IO;
 [System.Serializable]
 public class ScoreData
 {
-    public int highScore; // ÃÖ°íÁ¡ ÀúÀå
+    public int highScore;
 }
 
 public class ScoreManager : MonoBehaviour
 {
-    public static ScoreManager Instance; // ½Ì±ÛÅæ ÀÎ½ºÅÏ½º
-    public int score = 0;                // ÇöÀç Á¡¼ö
-    public int highScore = 0;    // ÃÖ°íÁ¡
-    public TextMeshProUGUI scoreText;    // ÇöÀç Á¡¼ö
-    public TextMeshProUGUI highScoreText; // ÃÖ°í Á¡¼ö
+    public static ScoreManager Instance;
+    public int score = 0;
+    public int highScore = 0;
+    public TextMeshProUGUI scoreText;
+    public TextMeshProUGUI highScoreText;
 
-    private string savePath;     // ÀúÀå °æ·Î
+    private string savePath;
+    private int loadedHighScore;
+
+    public bool HasNewHighScore => score > loadedHighScore;
 
     private void Awake()
     {
@@ -33,68 +34,53 @@ public class ScoreManager : MonoBehaviour
     }
 
     void Start()
-    {  
-        // ÀúÀå °æ·Î ¼³Á¤
+    {
         savePath = Path.Combine(Application.persistentDataPath, "scoreData.json");
-
-        // ÀúÀåµÈ µ¥ÀÌÅÍ ·Îµå
         LoadScore();
-
-        // ÃÖ°íÁ¡ UI Ç¥½Ã
-        Debug.Log($"ÃÖ°í Á¡¼ö : {highScore}");
         UpdateScoreUI();
     }
 
     public void AddScore(int amount)
     {
-        score += amount; // Á¡¼ö Áõ°¡
+        score += amount;
         if (score > highScore)
-        {
             highScore = score;
-        }
-        UpdateScoreUI(); // UI ¾÷µ¥ÀÌÆ®
+        UpdateScoreUI();
     }
 
     void UpdateScoreUI()
     {
         if (scoreText != null)
-        {
-            scoreText.text = "ÇöÀç Á¡¼ö: " + score;
-            highScoreText.text = $"ÃÖ°í Á¡¼ö : {highScore}";
-
-            if (highScore <= score)
-                highScoreText.text = $"ÃÖ°í Á¡¼ö : {highScore}";
-        }
+            scoreText.text = "ì ìˆ˜ : " + score;
+        if (highScoreText != null)
+            highScoreText.text = "ìµœê³  ì ìˆ˜ : " + highScore;
         SaveScore();
     }
 
     void SaveScore()
     {
-        // µ¥ÀÌÅÍ ÀúÀå
+        if (string.IsNullOrEmpty(savePath))
+            return;
+
         ScoreData data = new ScoreData();
         data.highScore = highScore;
-
         string json = JsonUtility.ToJson(data, true);
         File.WriteAllText(savePath, json);
-        Debug.Log($"Á¡¼ö ÀúÀå ¿Ï·á: {savePath}");
     }
 
     void LoadScore()
     {
-        // ÆÄÀÏÀÌ Á¸ÀçÇÏ¸é µ¥ÀÌÅÍ ºÒ·¯¿À±â
         if (File.Exists(savePath))
         {
             string json = File.ReadAllText(savePath);
             ScoreData data = JsonUtility.FromJson<ScoreData>(json);
-
-            // ÃÖ°íÁ¡ ºÒ·¯¿À±â
             highScore = data.highScore;
-            highScoreText.text = $"ÃÖ°í Á¡¼ö : {highScore}";
+            loadedHighScore = highScore;
         }
         else
         {
-            Debug.Log("ÀúÀåµÈ Á¡¼ö°¡ ¾ø½À´Ï´Ù. ÃÊ±âÈ­ÇÕ´Ï´Ù.");
             highScore = 0;
+            loadedHighScore = 0;
         }
     }
 

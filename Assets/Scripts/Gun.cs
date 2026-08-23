@@ -1,11 +1,10 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
-// 무기 타입 정의
 public enum GunType
 {
     AssaultRifle,
@@ -16,311 +15,490 @@ public enum GunType
 
 public class Gun : MonoBehaviour
 {
-    // 무기 타입 설정
-    public GunType gunType; // 무기 타입 선택
-    public string gunName;         // 총기 이름 (Rifle 또는 Shotgun)
+    public GunType gunType;
+    public string gunName;
 
-    // 탄약 및 재장전 설정
     public int maxAmmo = 30;
     public int currentAmmo;
     public float reloadTime = 2f;
     private bool isReloading = false;
+    private Coroutine reloadRoutine;
+    private Coroutine shotgunCooldownRoutine;
 
-    // 발사 설정
-    public float fireRate = 0.1f; // 연사 속도
+    public float fireRate = 0.1f;
     private float nextTimeToFire = 0f;
-    private bool isAutoFire = true; // 발사 모드 (연사/단발)
+    [SerializeField] private bool isAutoFire = true;
 
-    // 사격 관련 설정
     public float range = 100f;
     public int damage = 10;
 
-    // 샷건 전용 변수
-    public int pellets = 1;              // 샷건 탄환 개수
-    public float spreadAngle = 0f;       // 샷건 확산 각도
-    
-    private bool isShotgunCooldown = false; // 샷건 쿨다운 상태
-    public float shotgunCooldownTime = 1.0f; // 샷건 딜레이 시간
+    public int pellets = 1;
+    public float spreadAngle = 0f;
 
-    // 총구 위치와 카메라 설정
-    public Transform gunBarrel;      // 총구 위치
-    public Camera fpsCamera;         // 카메라
+    private bool isShotgunCooldown = false;
+    public float shotgunCooldownTime = 1.0f;
 
-    // 이펙트 및 사운드
+    public Transform gunBarrel;
+    public Camera fpsCamera;
+
     public ParticleSystem muzzleFlash;
     public AudioSource gunAudioSource;
     public AudioClip gunShotSound;
     public AudioClip reloadSound;
+    public Vector3 reloadMoveOffset = new Vector3(0f, -0.04f, 0.05f);
+    public Vector3 reloadTiltEuler = new Vector3(8f, 0f, -6f);
+    [Range(0.05f, 0.5f)] public float reloadDipRatio = 0.2f;
+    [Range(0.05f, 0.5f)] public float reloadRecoverRatio = 0.22f;
+    public Transform magazinePart;
+    public string magazinePartName;
+    public Vector3 magazineEjectOffset = new Vector3(0f, -0.08f, 0f);
+    public Transform pumpPart;
+    public string pumpPartName;
+    public Vector3 pumpPullOffset = new Vector3(0f, 0f, -0.12f);
+    public GameObject reloadShellPrefab;
+    public Vector3 reloadShellStartLocalOffset = new Vector3(0.03f, -0.12f, -0.04f);
+    public Vector3 reloadShellEndLocalOffset = new Vector3(0f, -0.03f, -0.08f);
+    public Vector3 reloadShellLocalEuler = new Vector3(0f, 0f, 0f);
+    public float reloadShellScale = 1f;
 
-    // UI
     public TextMeshProUGUI ammoText;
     public TextMeshProUGUI fireModeText;
     public Image crosshairImage;
     public Color normalColor = Color.white;
     public Color targetColor = Color.red;
 
-    // 반동 및 크로스헤어 설정
+    public float muzzleFlashLifetime = 0.28f;
+    public float muzzleFlashScale = 1f;
+    public float firePitchMin = 0.97f;
+    public float firePitchMax = 1.04f;
+    [Range(0f, 1f)] public float fireVolume = 1f;
+
     private GunRecoil gunRecoil;
     private WeaponRecoil weaponRecoil;
-    public float recoilSpread = 10f; // 반동 크기
-    private float currentSpread = 0f;
+    private PlayerHealth playerHealth;
+    private Tween reloadTween;
+    private Vector3 magazineRestPosition;
+    private Quaternion magazineRestRotation;
+    private Vector3 pumpRestPosition;
+    private Quaternion pumpRestRotation;
+    private bool hasMagazineRestPose;
+    private bool hasPumpRestPose;
+    private GameObject spawnedReloadShell;
+    public float recoilSpread = 10f;
 
     void Start()
     {
-        // 무기 타입별 설정 적용
-        ApplyGunSettings();
-
-        // 초기 설정
         currentAmmo = maxAmmo;
-        gunRecoil = FindObjectOfType<GunRecoil>();
-        weaponRecoil = FindObjectOfType<WeaponRecoil>();
+        playerHealth = FindObjectOfType<PlayerHealth>();
+        gunRecoil = GetComponent<GunRecoil>();
+        weaponRecoil = GetComponent<WeaponRecoil>();
+        ResolveReloadParts();
         UpdateUI();
     }
-   
-    void Update()
-    {  
-        // 재장전 중이면 조작 금지
-        if (isReloading) return;
 
-        UpdateUI(); // UI 업데이트
-        // 발사 모드 전환 (B 키)
-        if (Input.GetKeyDown(KeyCode.B))
+    void Update()
+    {
+        if (playerHealth != null && playerHealth.isPlayerDie)
         {
-            if(gunType != GunType.AssaultRifle)
-            isAutoFire = !isAutoFire;
+            SetRecoilFiring(false);
+            return;
         }
 
-        // R 키 입력 또는 탄약 소진 시 재장전
-        if (Input.GetKeyDown(KeyCode.R) || currentAmmo <= 0)
+        if (isReloading)
+            return;
+
+        UpdateUI();
+
+        if (Input.GetKeyDown(KeyCode.B) && gunType != GunType.AssaultRifle)
+            isAutoFire = !isAutoFire;
+
+        if ((Input.GetKeyDown(KeyCode.R) || currentAmmo <= 0) && currentAmmo < maxAmmo && reloadRoutine == null)
         {
-            StartCoroutine(Reload());
+            reloadRoutine = StartCoroutine(Reload());
             return;
         }
 
         if (!IsPointerOverUI())
         {
-            // 단발 모드
             if (!isAutoFire && Input.GetButtonDown("Fire1") && currentAmmo > 0)
             {
-                if (gunType == GunType.Shotgun && isShotgunCooldown) return; // 샷건 쿨다운 체크
+                if (gunType == GunType.Shotgun && isShotgunCooldown)
+                    return;
+
                 Shoot();
 
-                if (gunType == GunType.Shotgun) // 샷건일 경우 쿨다운 시작
-                {
-                    StartCoroutine(ShotgunCooldown());
-                }
-                gunRecoil.SetFiringState(true);
-                weaponRecoil.SetFiringState(true);
+                if (gunType == GunType.Shotgun && shotgunCooldownRoutine == null)
+                    shotgunCooldownRoutine = StartCoroutine(ShotgunCooldown());
+
+                SetRecoilFiring(true);
             }
-            // 연사 모드
             else if (isAutoFire && Input.GetButton("Fire1") && currentAmmo > 0 && Time.time >= nextTimeToFire)
             {
                 nextTimeToFire = Time.time + fireRate;
                 Shoot();
+                SetRecoilFiring(true);
             }
         }
-        if(Input.GetButtonUp("Fire1"))
-        {
-            gunRecoil.SetFiringState(false);
-            weaponRecoil.SetFiringState(false);
-        }
 
+        if (Input.GetButtonUp("Fire1"))
+            SetRecoilFiring(false);
 
-        // 크로스헤어 업데이트
         UpdateCrosshair();
     }
 
-    // 무기 타입별 설정 적용
-    void ApplyGunSettings()
-    {
-        switch (gunType)
-        {
-            case GunType.AssaultRifle:
-                maxAmmo = 30;
-                reloadTime = 2f;
-                fireRate = 0.1f;
-                isAutoFire = true;
-                damage = 10;
-                recoilSpread = 10f;
-                break;
-
-            case GunType.Shotgun:
-                maxAmmo = 8;
-                reloadTime = 3f;
-                fireRate = 1f;
-                isAutoFire = false;
-                damage = 15;
-                recoilSpread = 20f;
-                pellets = 8;
-                spreadAngle = 10f;
-                break;
-
-            case GunType.SniperRifle:
-                maxAmmo = 5;
-                reloadTime = 2.5f;
-                fireRate = 1.5f;
-                isAutoFire = false;
-                damage = 50;
-                recoilSpread = 25f;
-                break;
-
-            case GunType.Pistol:
-                maxAmmo = 15;
-                reloadTime = 1.5f;
-                fireRate = 0.3f;
-                isAutoFire = false;
-                damage = 8;
-                recoilSpread = 5f;
-                break;
-        }
-    }
-
-    // UI 업데이트
     public void UpdateUI()
     {
-        ammoText.text = currentAmmo + " / " + maxAmmo;
-        fireModeText.text = isAutoFire ? "AUTO" : "SINGLE";
+        if (ammoText != null)
+            ammoText.text = currentAmmo + " / " + maxAmmo;
+        if (fireModeText != null)
+            fireModeText.text = isAutoFire ? "AUTO" : "SINGLE";
     }
 
-    // 크로스헤어 업데이트
     void UpdateCrosshair()
     {
-        // 크로스헤어 색상 변경 (적 조준 시 빨간색)
-        Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit hit;
+        if (crosshairImage == null || fpsCamera == null)
+            return;
 
-        if (Physics.Raycast(ray, out hit, range))
-        {
-            if (hit.collider != null)
-            {
-                if (hit.transform.CompareTag("Enemy"))
-                    crosshairImage.color = targetColor;
-                else
-                    crosshairImage.color = normalColor;
-            }
-        }
+        Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        if (Physics.Raycast(ray, out RaycastHit hit, range) && hit.transform.CompareTag("Enemy"))
+            crosshairImage.color = targetColor;
         else
-        {
             crosshairImage.color = normalColor;
-        }
     }
 
-    // 발사 기능
     void Shoot()
     {
         ApplyRecoil();
-        if (gunAudioSource != null)
-        {
-            if (gunShotSound != null)
-            {
-                gunAudioSource.clip = gunShotSound;
-                gunAudioSource.Play();
-            }
-        }
-        if (muzzleFlash != null)
-            Instantiate(muzzleFlash, gunBarrel);
+
+        PlayFireSound();
+        PlayMuzzleFlash();
+
         currentAmmo--;
+
         if (gunType == GunType.Shotgun)
         {
+            bool anyHit = false;
+            bool killed = false;
             for (int i = 0; i < pellets; i++)
             {
-                FirePellet();
+                if (FirePellet(out bool pelletKilled))
+                {
+                    anyHit = true;
+                    if (pelletKilled)
+                        killed = true;
+                }
             }
+
+            if (anyHit)
+                CombatHitFeedback.PlayHudFeedback(killed);
         }
-        else
+        else if (FireSingleShot(out bool killed))
         {
-            FireSingleShot();
+            CombatHitFeedback.PlayHudFeedback(killed);
         }
     }
 
-    void FireSingleShot()
+    bool FireSingleShot(out bool killed)
     {
+        killed = false;
+        if (fpsCamera == null)
+            return false;
+
         Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        if (Physics.Raycast(ray, out RaycastHit hit, range))
-        {
-            EnemyAI target = hit.transform.GetComponent<EnemyAI>();
-            if (target != null)
-            {
-                target.EnemyTakeDamage(damage);
-            }
-        }
+        if (!Physics.Raycast(ray, out RaycastHit hit, range))
+            return false;
+
+        return ApplyHit(hit, out killed);
     }
 
-    void FirePellet()
+    bool FirePellet(out bool killed)
     {
+        killed = false;
+        if (fpsCamera == null)
+            return false;
+
         Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         Vector3 shootDirection = ray.direction;
         shootDirection.x += Random.Range(-spreadAngle, spreadAngle) / 100f;
         shootDirection.y += Random.Range(-spreadAngle, spreadAngle) / 100f;
 
-        if (Physics.Raycast(fpsCamera.transform.position, shootDirection, out RaycastHit hit, range))
-        {
-            EnemyAI target = hit.transform.GetComponent<EnemyAI>();
-            if (target != null)
-            {
-                target.EnemyTakeDamage(damage);
-            }
-        }
+        if (!Physics.Raycast(fpsCamera.transform.position, shootDirection, out RaycastHit hit, range))
+            return false;
+
+        return ApplyHit(hit, out killed);
     }
-    // 반동 적용
+
+    bool ApplyHit(RaycastHit hit, out bool killed)
+    {
+        killed = false;
+        EnemyAI target = hit.collider.GetComponentInParent<EnemyAI>();
+        if (target == null)
+            return false;
+
+        killed = target.EnemyTakeDamage(damage, hit.point, hit.normal);
+        return true;
+    }
+
+    void PlayFireSound()
+    {
+        if (gunAudioSource == null || gunShotSound == null)
+            return;
+
+        float previousPitch = gunAudioSource.pitch;
+        gunAudioSource.pitch = Random.Range(firePitchMin, firePitchMax);
+        gunAudioSource.PlayOneShot(gunShotSound, fireVolume);
+        gunAudioSource.pitch = previousPitch;
+    }
+
+    void PlayMuzzleFlash()
+    {
+        if (muzzleFlash == null || gunBarrel == null)
+            return;
+
+        ParticleSystem flash = Instantiate(muzzleFlash, gunBarrel.position, gunBarrel.rotation, gunBarrel);
+        flash.transform.localScale *= muzzleFlashScale;
+        Destroy(flash.gameObject, muzzleFlashLifetime);
+    }
+
     void ApplyRecoil()
     {
-        gunRecoil.ApplyRecoil();
-        weaponRecoil.ApplyRecoil();
-        currentSpread += recoilSpread;
+        if (gunRecoil != null)
+            gunRecoil.ApplyRecoil();
+        if (weaponRecoil != null)
+            weaponRecoil.ApplyRecoil();
     }
 
-    // 재장전 기능
     IEnumerator Reload()
     {
-        if (currentAmmo == maxAmmo) yield break;
-
         isReloading = true;
-        gunAudioSource.PlayOneShot(reloadSound);
+        SetRecoilFiring(false);
+        PlayReloadMotion();
+
+        if (gunAudioSource != null && reloadSound != null)
+            gunAudioSource.PlayOneShot(reloadSound);
 
         yield return new WaitForSeconds(reloadTime);
 
         currentAmmo = maxAmmo;
         isReloading = false;
+        reloadRoutine = null;
         UpdateUI();
     }
+
+    void PlayReloadMotion()
+    {
+        Transform target = GetReloadTarget();
+        if (target == null || reloadTime <= 0f)
+            return;
+
+        if (reloadTween != null && reloadTween.IsActive())
+            reloadTween.Kill();
+
+        ResolveReloadParts();
+
+        if (weaponRecoil != null)
+            weaponRecoil.SetReloadLock(true);
+
+        Vector3 restPos = weaponRecoil != null ? weaponRecoil.RestLocalPosition : target.localPosition;
+        Quaternion restRot = weaponRecoil != null ? weaponRecoil.RestLocalRotation : target.localRotation;
+        Quaternion reloadRot = restRot * Quaternion.Euler(reloadTiltEuler);
+        float duration = reloadTime;
+        bool hasMagazine = magazinePart != null && gunType != GunType.Shotgun;
+        bool hasPump = pumpPart != null;
+        bool hasShellInsert = reloadShellPrefab != null;
+
+        float dipDuration = duration * Mathf.Clamp(reloadDipRatio, 0.05f, 0.5f);
+        float recoverDuration = duration * Mathf.Clamp(reloadRecoverRatio, 0.05f, 0.5f);
+        float recoverStart = Mathf.Max(dipDuration, duration - recoverDuration);
+
+        Sequence sequence = DOTween.Sequence();
+        sequence.SetTarget(target);
+        sequence.Insert(0f, target.DOLocalMove(restPos + reloadMoveOffset, dipDuration).SetEase(Ease.OutQuad));
+        sequence.Insert(0f, target.DOLocalRotateQuaternion(reloadRot, dipDuration).SetEase(Ease.OutQuad));
+        sequence.Insert(recoverStart, target.DOLocalMove(restPos, recoverDuration).SetEase(Ease.InOutQuad));
+        sequence.Insert(recoverStart, target.DOLocalRotateQuaternion(restRot, recoverDuration).SetEase(Ease.InOutQuad));
+
+        if (hasMagazine)
+        {
+            float magOutDuration = duration * 0.12f;
+            float magInStart = duration * 0.2f;
+            float magInDuration = duration * 0.14f;
+            sequence.Insert(0f, magazinePart.DOLocalMove(magazineRestPosition + magazineEjectOffset, magOutDuration).SetEase(Ease.OutQuad));
+            sequence.Insert(magInStart, magazinePart.DOLocalMove(magazineRestPosition, magInDuration).SetEase(Ease.InQuad));
+        }
+
+        if (hasShellInsert)
+        {
+            ClearSpawnedReloadShell();
+            spawnedReloadShell = Instantiate(reloadShellPrefab, target);
+            spawnedReloadShell.transform.localPosition = reloadShellStartLocalOffset;
+            spawnedReloadShell.transform.localRotation = Quaternion.Euler(reloadShellLocalEuler);
+            spawnedReloadShell.transform.localScale = Vector3.one * reloadShellScale;
+
+            float shellMoveDuration = duration * 0.22f;
+            sequence.Insert(duration * 0.08f, spawnedReloadShell.transform.DOLocalMove(reloadShellEndLocalOffset, shellMoveDuration).SetEase(Ease.InQuad));
+            sequence.InsertCallback(duration * 0.32f, ClearSpawnedReloadShell);
+        }
+
+        if (hasPump)
+        {
+            float pumpStart = hasShellInsert ? duration * 0.38f : duration * 0.28f;
+            sequence.Insert(pumpStart, pumpPart.DOLocalMove(pumpRestPosition + pumpPullOffset, duration * 0.14f).SetEase(Ease.OutQuad));
+            sequence.Insert(pumpStart + duration * 0.16f, pumpPart.DOLocalMove(pumpRestPosition, duration * 0.14f).SetEase(Ease.InQuad));
+        }
+
+        sequence.OnKill(() =>
+        {
+            reloadTween = null;
+            RestoreReloadVisuals(target, restPos, restRot);
+        });
+        reloadTween = sequence;
+    }
+
+    void ResolveReloadParts()
+    {
+        if (magazinePart == null)
+            magazinePart = FindDescendant(transform, magazinePartName);
+        if (pumpPart == null)
+            pumpPart = FindDescendant(transform, pumpPartName);
+
+        if (magazinePart != null && !hasMagazineRestPose)
+        {
+            magazineRestPosition = magazinePart.localPosition;
+            magazineRestRotation = magazinePart.localRotation;
+            hasMagazineRestPose = true;
+        }
+
+        if (pumpPart != null && !hasPumpRestPose)
+        {
+            pumpRestPosition = pumpPart.localPosition;
+            pumpRestRotation = pumpPart.localRotation;
+            hasPumpRestPose = true;
+        }
+    }
+
+    void RestoreReloadVisuals(Transform body, Vector3 restPos, Quaternion restRot)
+    {
+        if (weaponRecoil != null)
+            weaponRecoil.SetReloadLock(false);
+        else if (body != null)
+        {
+            body.localPosition = restPos;
+            body.localRotation = restRot;
+        }
+
+        if (magazinePart != null && hasMagazineRestPose)
+        {
+            magazinePart.localPosition = magazineRestPosition;
+            magazinePart.localRotation = magazineRestRotation;
+        }
+
+        if (pumpPart != null && hasPumpRestPose)
+        {
+            pumpPart.localPosition = pumpRestPosition;
+            pumpPart.localRotation = pumpRestRotation;
+        }
+
+        ClearSpawnedReloadShell();
+    }
+
+    void ClearSpawnedReloadShell()
+    {
+        if (spawnedReloadShell == null)
+            return;
+
+        Destroy(spawnedReloadShell);
+        spawnedReloadShell = null;
+    }
+
+    static Transform FindDescendant(Transform root, string partName)
+    {
+        if (root == null || string.IsNullOrEmpty(partName))
+            return null;
+
+        if (root.name == partName)
+            return root;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform found = FindDescendant(root.GetChild(i), partName);
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    Transform GetReloadTarget()
+    {
+        if (weaponRecoil != null && weaponRecoil.weaponTransform != null)
+            return weaponRecoil.weaponTransform;
+        return transform;
+    }
+
     public void CancelReload()
     {
-        StopCoroutine(Reload()); // 진행 중인 코루틴 중단
-        isReloading = false;     // 재장전 상태 초기화
+        if (reloadRoutine != null)
+        {
+            StopCoroutine(reloadRoutine);
+            reloadRoutine = null;
+        }
+        isReloading = false;
+
+        if (reloadTween != null && reloadTween.IsActive())
+            reloadTween.Kill();
+        else
+            RestoreReloadVisuals(
+                GetReloadTarget(),
+                weaponRecoil != null ? weaponRecoil.RestLocalPosition : transform.localPosition,
+                weaponRecoil != null ? weaponRecoil.RestLocalRotation : transform.localRotation
+            );
     }
 
     IEnumerator ShotgunCooldown()
     {
-        isShotgunCooldown = true; // 쿨다운 시작
-        yield return new WaitForSeconds(shotgunCooldownTime); // 딜레이 적용
-        isShotgunCooldown = false; // 쿨다운 해제
+        isShotgunCooldown = true;
+        yield return new WaitForSeconds(shotgunCooldownTime);
+        isShotgunCooldown = false;
+        shotgunCooldownRoutine = null;
     }
+
     public void CancelShotgunCooldown()
     {
-        StopCoroutine(ShotgunCooldown()); // 진행 중인 코루틴 중단
-        isShotgunCooldown = false;        // 쿨다운 상태 해제
+        if (shotgunCooldownRoutine != null)
+        {
+            StopCoroutine(shotgunCooldownRoutine);
+            shotgunCooldownRoutine = null;
+        }
+        isShotgunCooldown = false;
     }
 
     public void IncreaseDamage(int amount)
     {
         damage += amount;
-        Debug.Log($"{gunName} 데미지 증가: {damage}");
     }
 
     public void IncreaseMaxAmmo(int amount)
     {
         maxAmmo += amount;
-        Debug.Log($"{gunName} 최대 탄수 증가: {maxAmmo}");
     }
-    // UI 위에서 클릭 할 경우 사격을 막기 위한 함수
-    private bool IsPointerOverUI()
+
+    void SetRecoilFiring(bool firing)
     {
-        // PC에서 마우스
+        if (gunRecoil != null)
+            gunRecoil.SetFiringState(firing);
+        if (weaponRecoil != null)
+            weaponRecoil.SetFiringState(firing);
+    }
+
+    bool IsPointerOverUI()
+    {
+        if (EventSystem.current == null)
+            return false;
+
         if (EventSystem.current.IsPointerOverGameObject())
             return true;
 
-        // 모바일에서 터치
         if (Input.touchCount > 0 && EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId))
             return true;
 

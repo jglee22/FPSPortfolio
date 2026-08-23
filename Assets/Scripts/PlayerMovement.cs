@@ -10,77 +10,139 @@ public class PlayerMovement : MonoBehaviour
     public float sprintSpeed = 18f;
     public float gravity = -9.8f;
     public float mouseSensitivity = 100f;
+    public float standHeight = 2f;
+    public float crouchHeight = 1f;
+    public float crouchCameraHeight = 0.9f;
+    public float crouchTransitionSpeed = 12f;
 
-    public float jumpHeight = 3f;  // 점프 높이
-    private Vector3 velocity;      // 캐릭터의 속도
-    public bool isGrounded;        // 바닥에 닿아 있는지 여부
+    public float jumpHeight = 3f;
+    private Vector3 velocity;
+    public bool isGrounded;
 
-    public Transform groundCheck; // 바닥 체크 위치
-    public float groundDistance = 0.4f; // 체크 반경
-    public LayerMask groundMask; // 바닥으로 인식할 레이어
+    public Transform groundCheck;
+    public float groundDistance = 0.4f;
+    public LayerMask groundMask;
 
     public Transform playerCamera;
 
-    float xRotation = 0f;
     private bool isCrouching = false;
-
+    private float currentHeight;
+    private float standCameraY;
+    private float currentCameraY;
     private PlayerHealth playerHealth;
+    private CameraRig cameraRig;
+
+    void Awake()
+    {
+        cameraRig = CameraRig.GetOrCreate(playerCamera);
+    }
 
     void Start()
     {
         playerHealth = GetComponent<PlayerHealth>();
+        currentHeight = standHeight;
+        standCameraY = playerCamera != null ? playerCamera.localPosition.y : crouchCameraHeight;
+        currentCameraY = standCameraY;
+        ApplyCapsuleHeight(currentHeight);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
     }
+
     void Update()
     {
-        if (playerHealth != null)
-        {
-            if (playerHealth.isPlayerDie)
-                return;
-        }
+        if (playerHealth != null && playerHealth.isPlayerDie)
+            return;
 
         isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
         if (isGrounded && velocity.y < 0)
         {
-            velocity.y = -2f; // 약간의 중력 유지
+            velocity.y = -2f;
         }
 
-        if (Input.GetButtonDown("Jump") && isGrounded) // 점프 키(스페이스바)
+        if (Input.GetButtonDown("Jump") && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
 
-        // 마우스 회전
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
-        float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : speed;
+        if (cameraRig != null)
+            cameraRig.AddPitch(-mouseY);
 
-        // X축 회전 누적값 조절 및 제한
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-
-        playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
 
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            if (!isCrouching || CanStand())
+                isCrouching = !isCrouching;
+        }
 
-        // 이동
+        UpdateCrouch();
+
+        float currentSpeed = GetCurrentSpeed();
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
         Vector3 move = transform.right * x + transform.forward * z;
         controller.Move(move * currentSpeed * Time.deltaTime);
 
-        // 중력 적용
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+    }
 
-        if (Input.GetKeyDown(KeyCode.C))
-        {
-            isCrouching = !isCrouching;
-            controller.height = isCrouching ? 1.0f : 2.0f;
-            speed = isCrouching ? crouchSpeed : 5f;
-        }
+    float GetCurrentSpeed()
+    {
+        if (isCrouching)
+            return crouchSpeed;
+
+        if (Input.GetKey(KeyCode.LeftShift))
+            return sprintSpeed;
+
+        return speed;
+    }
+
+    void UpdateCrouch()
+    {
+        float targetHeight = isCrouching ? crouchHeight : standHeight;
+        float targetCameraY = isCrouching ? crouchCameraHeight : standCameraY;
+        float t = 1f - Mathf.Exp(-crouchTransitionSpeed * Time.deltaTime);
+
+        currentHeight = Mathf.Lerp(currentHeight, targetHeight, t);
+        currentCameraY = Mathf.Lerp(currentCameraY, targetCameraY, t);
+
+        if (Mathf.Abs(currentHeight - targetHeight) < 0.001f)
+            currentHeight = targetHeight;
+        if (Mathf.Abs(currentCameraY - targetCameraY) < 0.001f)
+            currentCameraY = targetCameraY;
+
+        ApplyCapsuleHeight(currentHeight);
+
+        if (cameraRig != null)
+            cameraRig.SetHeightOffset(currentCameraY - standCameraY);
+    }
+
+    void ApplyCapsuleHeight(float height)
+    {
+        if (controller == null)
+            return;
+
+        controller.height = height;
+        Vector3 center = controller.center;
+        center.y = height * 0.5f;
+        controller.center = center;
+    }
+
+    bool CanStand()
+    {
+        if (controller == null)
+            return true;
+
+        float radius = controller.radius * 0.9f;
+        Vector3 origin = transform.position + Vector3.up * (radius + controller.skinWidth);
+        float checkDistance = standHeight - crouchHeight;
+        if (checkDistance <= 0f)
+            return true;
+
+        return !Physics.SphereCast(origin, radius, Vector3.up, out _, checkDistance, groundMask);
     }
 }

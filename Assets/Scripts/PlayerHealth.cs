@@ -27,6 +27,9 @@ public class PlayerHealth : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
+        if (isPlayerDie)
+            return;
+
         damageOverlay.ShowDamageEffect();
 
         cameraShake.Shake(duration, magnitude);
@@ -47,8 +50,13 @@ public class PlayerHealth : MonoBehaviour
 
     void Die()
     {
-        Debug.Log("플레이어 사망!");
+        if (isPlayerDie)
+            return;
+
         isPlayerDie = true;
-        // 게임 종료 처리 (필요 시 추가 구현)
+
+        MenuManager menuManager = FindObjectOfType<MenuManager>();
+        if (menuManager != null)
+            menuManager.ShowGameOver();
     }
 }

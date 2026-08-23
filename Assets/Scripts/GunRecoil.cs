@@ -1,59 +1,73 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class GunRecoil : MonoBehaviour
 {
-    public Transform cameraTransform;  // FPS 카메라
-    public float recoilAmount = 1.5f;  // 기본 반동 크기
-    public float recoilSpeed = 5f;     // 반동 회복 속도
-    public float maxRecoilX = 10f;     // X축 최대 반동 (상하)
-    public float maxRecoilY = 5f;      // Y축 최대 반동 (좌우)
+    public Transform cameraTransform;
+    public float recoilAmount = 1.5f;
+    public float recoilSpeed = 5f;
+    public float recoilRiseTime = 0.05f;
+    public float maxRecoilX = 10f;
+    public float maxRecoilY = 5f;
+    [Range(0f, 1f)] public float recoilYawScale = 0.4f;
+    [Range(0.1f, 1f)] public float firingRecoveryScale = 0.4f;
 
-    private Vector3 currentRotation;   // 현재 회전 값
-    private Vector3 targetRotation;    // 목표 회전 값
-
+    private Vector3 currentRotation;
+    private Vector3 targetRotation;
+    private Vector3 recoilVelocity;
     private PlayerHealth playerHealth;
-    private bool isFiring = false;
-    private void Awake()
+    private CameraRig cameraRig;
+    private bool isFiring;
+
+    void Awake()
     {
         playerHealth = FindObjectOfType<PlayerHealth>();
     }
+
     void Update()
     {
-        if (!playerHealth.isPlayerDie && isFiring)
-        {
-            // 반동 회복 처리
-            targetRotation = Vector3.Lerp(targetRotation, Vector3.zero, recoilSpeed * Time.deltaTime);
-            currentRotation = Vector3.Slerp(currentRotation, targetRotation, recoilSpeed * Time.deltaTime);
+        if (playerHealth != null && playerHealth.isPlayerDie)
+            return;
 
-            // 기존 회전값에 반동 추가
-            Quaternion originalRotation = cameraTransform.localRotation; // 기존 회전값 저장
-            Quaternion recoilRotation = Quaternion.Euler(currentRotation); // 반동 회전값 생성
-            cameraTransform.localRotation = originalRotation * recoilRotation; // 기존 회전에 반동값 곱하기
-        }
+        float recovery = isFiring ? recoilSpeed * firingRecoveryScale : recoilSpeed;
+        targetRotation = Vector3.Lerp(targetRotation, Vector3.zero, recovery * Time.deltaTime);
+        currentRotation = Vector3.SmoothDamp(currentRotation, targetRotation, ref recoilVelocity, Mathf.Max(0.01f, recoilRiseTime));
+
+        CameraRig rig = GetRig();
+        if (rig != null)
+            rig.SetRecoil(currentRotation);
     }
 
     public void ApplyRecoil()
     {
-        if (!playerHealth.isPlayerDie)
-        {
+        if (playerHealth != null && playerHealth.isPlayerDie)
+            return;
 
+        float yawRange = recoilAmount * recoilYawScale;
+        targetRotation += new Vector3(
+            -Mathf.Abs(recoilAmount),
+            Random.Range(-yawRange, yawRange),
+            0f
+        );
 
-            // 반동 누적
-            targetRotation += new Vector3(
-                Random.Range(-recoilAmount, recoilAmount),   // 상하 반동
-                Random.Range(-recoilAmount / 2, recoilAmount / 2), // 좌우 반동
-                0
-            );
-
-            // 최대 반동 제한 적용
-            targetRotation.x = Mathf.Clamp(targetRotation.x, -maxRecoilX, maxRecoilX);
-            targetRotation.y = Mathf.Clamp(targetRotation.y, -maxRecoilY, maxRecoilY);
-        }
+        targetRotation.x = Mathf.Clamp(targetRotation.x, -maxRecoilX, maxRecoilX);
+        targetRotation.y = Mathf.Clamp(targetRotation.y, -maxRecoilY, maxRecoilY);
     }
+
     public void SetFiringState(bool firing)
     {
-        isFiring = firing; // 사격 상태 업데이트
+        isFiring = firing;
+    }
+
+    CameraRig GetRig()
+    {
+        if (cameraRig == null)
+        {
+            Transform cam = cameraTransform;
+            if (cam == null && Camera.main != null)
+                cam = Camera.main.transform;
+            cameraRig = CameraRig.GetOrCreate(cam);
+        }
+
+        return cameraRig;
     }
 }

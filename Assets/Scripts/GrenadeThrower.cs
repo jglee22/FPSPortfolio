@@ -14,15 +14,20 @@ public class GrenadeThrower : MonoBehaviour
     public int currentGrenadeCount;     // ¼ö·ùÅº °³¼ö
     public float throwCooldown = 1f; // ÅõÃ´ Äğ´Ù¿î
     private bool isCooldown = false;
+    private PlayerHealth playerHealth;
 
     private void Start()
     {
+        playerHealth = FindObjectOfType<PlayerHealth>();
         currentGrenadeCount = maxGrenadeCount;
         grenadeCountText.text = " x " + maxGrenadeCount.ToString();
     }
 
     void Update()
     {
+        if (playerHealth != null && playerHealth.isPlayerDie)
+            return;
+
         if (Input.GetKeyDown(KeyCode.G) && currentGrenadeCount > 0 && !isCooldown)
         {
             ThrowGrenade(); // ¼ö·ùÅº ´øÁö±â

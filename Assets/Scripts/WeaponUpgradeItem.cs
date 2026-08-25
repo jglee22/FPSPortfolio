@@ -12,6 +12,24 @@ public class WeaponUpgradeItem : ScriptableObject
     public int amount;
     public float multiplier = 1f;
 
+    public string GetDescription()
+    {
+        if (increaseDamage)
+            return "공격력 +" + amount;
+        if (increaseAmmo)
+            return "탄창 +" + amount;
+        if (increaseFireRate)
+            return "발사 간격 " + FormatReductionPercent(multiplier) + "% 감소";
+        if (increaseReloadSpeed)
+            return "재장전 시간 " + FormatReductionPercent(multiplier) + "% 감소";
+        return string.Empty;
+    }
+
+    static int FormatReductionPercent(float value)
+    {
+        return Mathf.RoundToInt((1f - value) * 100f);
+    }
+
     public void Apply(Gun gun)
     {
         if (gun == null)

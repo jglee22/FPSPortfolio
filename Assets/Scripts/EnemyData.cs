@@ -9,4 +9,7 @@ public class EnemyData : ScriptableObject
     public int attackDamage = 10;
     public float moveSpeed = 3.5f;
     public bool isBoss;
+    public float enrageHealthRatio = 0.5f;
+    public float enrageMoveSpeedMultiplier = 1.5f;
+    public float enrageAnimatorSpeed = 1.35f;
 }

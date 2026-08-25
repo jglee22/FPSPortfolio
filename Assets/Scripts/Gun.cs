@@ -71,7 +71,6 @@ public class Gun : MonoBehaviour
     public Color normalColor = Color.white;
     public Color targetColor = Color.red;
 
-    public float muzzleFlashLifetime = 0.28f;
     public float muzzleFlashScale = 1f;
     public float firePitchMin = 0.97f;
     public float firePitchMax = 1.04f;
@@ -89,6 +88,7 @@ public class Gun : MonoBehaviour
     private bool hasMagazineRestPose;
     private bool hasPumpRestPose;
     private GameObject spawnedReloadShell;
+    private ParticleSystem muzzleFlashInstance;
     public float recoilSpread = 10f;
 
     void Awake()
@@ -109,6 +109,7 @@ public class Gun : MonoBehaviour
         gunRecoil = GetComponent<GunRecoil>();
         weaponRecoil = GetComponent<WeaponRecoil>();
         ResolveReloadParts();
+        EnsureMuzzleFlash();
         UpdateUI();
     }
 
@@ -116,6 +117,8 @@ public class Gun : MonoBehaviour
     {
         if (playerHealth != null && playerHealth.isPlayerDie)
         {
+            if (isReloading)
+                CancelReload();
             SetRecoilFiring(false);
             return;
         }
@@ -131,7 +134,7 @@ public class Gun : MonoBehaviour
 
         UpdateUI();
 
-        if (Input.GetKeyDown(KeyCode.B) && gunType != GunType.AssaultRifle)
+        if (Input.GetKeyDown(KeyCode.B) && gunType == GunType.Shotgun)
             isAutoFire = !isAutoFire;
 
         if ((Input.GetKeyDown(KeyCode.R) || currentAmmo <= 0) && currentAmmo < maxAmmo && reloadRoutine == null)
@@ -193,7 +196,7 @@ public class Gun : MonoBehaviour
         ApplyRecoil();
 
         if (viewModel != null)
-            viewModel.PlayFire();
+            viewModel.PlayFire(!isAutoFire);
 
         PlayFireSound();
         PlayMuzzleFlash();
@@ -275,14 +278,39 @@ public class Gun : MonoBehaviour
         gunAudioSource.pitch = previousPitch;
     }
 
-    void PlayMuzzleFlash()
+    void EnsureMuzzleFlash()
     {
-        if (muzzleFlash == null || gunBarrel == null)
+        if (muzzleFlashInstance != null || muzzleFlash == null)
             return;
 
-        ParticleSystem flash = Instantiate(muzzleFlash, gunBarrel.position, gunBarrel.rotation, gunBarrel);
-        flash.transform.localScale *= muzzleFlashScale;
-        Destroy(flash.gameObject, muzzleFlashLifetime);
+        if (muzzleFlash.gameObject.scene.IsValid())
+        {
+            muzzleFlashInstance = muzzleFlash;
+        }
+        else if (gunBarrel != null)
+        {
+            muzzleFlashInstance = Instantiate(muzzleFlash, gunBarrel);
+            muzzleFlashInstance.transform.localPosition = Vector3.zero;
+            muzzleFlashInstance.transform.localRotation = Quaternion.identity;
+            muzzleFlashInstance.transform.localScale = Vector3.one * muzzleFlashScale;
+        }
+
+        if (muzzleFlashInstance == null)
+            return;
+
+        ParticleSystem.MainModule main = muzzleFlashInstance.main;
+        main.playOnAwake = false;
+        muzzleFlashInstance.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
+    void PlayMuzzleFlash()
+    {
+        EnsureMuzzleFlash();
+        if (muzzleFlashInstance == null)
+            return;
+
+        muzzleFlashInstance.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        muzzleFlashInstance.Play(true);
     }
 
     void ApplyRecoil()
@@ -297,20 +325,45 @@ public class Gun : MonoBehaviour
     {
         isReloading = true;
         SetRecoilFiring(false);
+
+        float wait = reloadTime;
         if (viewModel != null)
-            viewModel.PlayReload();
+            wait = viewModel.PlayReload(ShouldUseTacticalReload(), reloadTime);
         else
             PlayReloadMotion();
 
         if (gunAudioSource != null && reloadSound != null)
             gunAudioSource.PlayOneShot(reloadSound);
 
-        yield return new WaitForSeconds(reloadTime);
+        float elapsed = 0f;
+        while (isReloading && elapsed < wait)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (isReloading)
+            ReloadComplete();
+        else
+            reloadRoutine = null;
+    }
+
+    public void ReloadComplete()
+    {
+        if (!isReloading)
+            return;
 
         currentAmmo = maxAmmo;
         isReloading = false;
         reloadRoutine = null;
+        if (viewModel != null)
+            viewModel.PlayIdle();
         UpdateUI();
+    }
+
+    bool ShouldUseTacticalReload()
+    {
+        return gunType == GunType.Shotgun && currentAmmo > 0 && currentAmmo < maxAmmo;
     }
 
     void PlayReloadMotion()
@@ -473,6 +526,8 @@ public class Gun : MonoBehaviour
             reloadRoutine = null;
         }
         isReloading = false;
+        if (viewModel != null)
+            viewModel.PlayIdle();
 
         if (reloadTween != null && reloadTween.IsActive())
             reloadTween.Kill();
@@ -546,8 +601,6 @@ public class Gun : MonoBehaviour
     {
         if (gunRecoil != null)
             gunRecoil.SetFiringState(firing);
-        if (weaponRecoil != null)
-            weaponRecoil.SetFiringState(firing);
     }
 
     bool IsPointerOverUI()

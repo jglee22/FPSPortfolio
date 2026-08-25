@@ -18,3 +18,6 @@ MonoBehaviour:
   attackDamage: 20
   moveSpeed: 5
   isBoss: 1
+  enrageHealthRatio: 0.5
+  enrageMoveSpeedMultiplier: 1.5
+  enrageAnimatorSpeed: 1.35

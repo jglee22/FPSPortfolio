@@ -11,7 +11,7 @@ public class WaveRewardUI : MonoBehaviour
     public WeaponUpgradeItem[] rewardItems;
     public int choiceCount = 3;
     public string panelTitle = "강화 선택";
-    public Vector2 cardSize = new Vector2(320f, 200f);
+    public Vector2 cardSize = new Vector2(320f, 240f);
     public float cardSpacing = 36f;
 
     bool hasChosen;
@@ -109,10 +109,11 @@ public class WaveRewardUI : MonoBehaviour
     void CreateChoiceCard(WeaponUpgradeItem reward, Vector2 position)
     {
         Button button = CreateButton("Reward_" + reward.name, panelRoot.transform, position, cardSize);
-        string label = string.IsNullOrEmpty(reward.displayName) ? reward.name : reward.displayName;
-        CreateLabel("Label", button.transform, label, 32f, Vector2.zero, Vector2.zero);
-        RectTransform labelRect = button.transform.GetChild(0).GetComponent<RectTransform>();
-        StretchFull(labelRect);
+        string title = string.IsNullOrEmpty(reward.displayName) ? reward.name : reward.displayName;
+        string description = reward.GetDescription();
+        CreateLabel("Title", button.transform, title, 30f, new Vector2(0f, 42f), new Vector2(cardSize.x - 28f, 48f));
+        if (!string.IsNullOrEmpty(description))
+            CreateLabel("Value", button.transform, description, 22f, new Vector2(0f, -28f), new Vector2(cardSize.x - 28f, 72f));
 
         WeaponUpgradeItem selectedReward = reward;
         button.onClick.AddListener(() => ChooseReward(selectedReward));

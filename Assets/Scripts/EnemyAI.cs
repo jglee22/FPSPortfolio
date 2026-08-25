@@ -21,15 +21,8 @@ public class EnemyAI : MonoBehaviour
     public LayerMask obstacleMask;
 
     public GameObject[] dropItems;
-    public float dropChance = 1f;
+    public float dropChance = 0.35f;
     public float dropHeight = 1f;
-
-    [SerializeField] int healthPerWave = 10;
-    [SerializeField] float speedPerWave = 0.1f;
-    [SerializeField] int damagePerWave = 2;
-    [SerializeField] int bossHealthPerWave = 20;
-    [SerializeField] int bossDamagePerWave = 5;
-    [SerializeField] float bossSpeedBonus = 0.5f;
 
     private NavMeshAgent agent;
     private Animator animator;
@@ -57,6 +50,12 @@ public class EnemyAI : MonoBehaviour
     private int baseAttackDamage;
     private bool hasCachedBaseStats;
     private bool spawnedAsBoss;
+    private bool isEnraged;
+    private float enrageHealthRatio;
+    private float enrageMoveSpeedMultiplier = 1f;
+    private float enrageAnimatorSpeed = 1f;
+    [SerializeField] Color enrageFlashColor = new Color(1f, 0.22f, 0.08f);
+    [SerializeField] float enrageFlashDuration = 0.45f;
 
     public event System.Action OnDeath;
     public event System.Action<int, int> OnHealthChanged;
@@ -104,6 +103,10 @@ public class EnemyAI : MonoBehaviour
         moveSpeed = sourceSpeed * speedMul;
         spawnedAsBoss = enemyData != null && enemyData.isBoss;
         maxHealth = health;
+        isEnraged = false;
+        enrageHealthRatio = spawnedAsBoss && enemyData != null ? enemyData.enrageHealthRatio : 0f;
+        enrageMoveSpeedMultiplier = enemyData != null ? enemyData.enrageMoveSpeedMultiplier : 1f;
+        enrageAnimatorSpeed = enemyData != null ? enemyData.enrageAnimatorSpeed : 1f;
         OnHealthChanged?.Invoke(health, maxHealth);
 
         if (agent != null)
@@ -118,6 +121,7 @@ public class EnemyAI : MonoBehaviour
 
         if (animator != null)
         {
+            animator.speed = 1f;
             animator.SetBool("isDead", false);
             animator.SetBool("isMoving", false);
             animator.SetBool("isAttacking", false);
@@ -218,11 +222,6 @@ public class EnemyAI : MonoBehaviour
             agent.isStopped = false;
     }
 
-    void RotateTowardsTarget()
-    {
-        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 10f);
-    }
-
     void RotateTowardsPlayer()
     {
         Vector3 direction = (player.position - transform.position).normalized;
@@ -254,16 +253,6 @@ public class EnemyAI : MonoBehaviour
             PlayerHealth targetHealth = hitCollider.GetComponent<PlayerHealth>();
             if (targetHealth != null)
                 targetHealth.TakeDamage(attackDamage);
-        }
-    }
-
-    IEnumerator SmoothRotate(Quaternion targetRotation)
-    {
-        float rotateSpeed = 5f;
-        while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f)
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotateSpeed);
-            yield return null;
         }
     }
 
@@ -351,10 +340,13 @@ public class EnemyAI : MonoBehaviour
         isRotatingAfterAttack = false;
         isPlayerDead = false;
         spawnedAsBoss = false;
+        isEnraged = false;
         health = baseHealth;
         maxHealth = baseHealth;
         moveSpeed = baseMoveSpeed;
         attackDamage = baseAttackDamage;
+        if (animator != null)
+            animator.speed = 1f;
     }
 
     void SetBodyCollision(bool enabled)
@@ -384,6 +376,8 @@ public class EnemyAI : MonoBehaviour
             health = 0;
 
         OnHealthChanged?.Invoke(health, maxHealth);
+        if (health > 0)
+            TryEnterEnrage();
 
         bool killed = health <= 0;
         CombatHitFeedback.PlayBodyFeedback(this, hitPoint, hitNormal, killed);
@@ -480,6 +474,24 @@ public class EnemyAI : MonoBehaviour
             if (renderers[i] != null)
                 renderers[i].SetPropertyBlock(null);
         }
+    }
+
+    void TryEnterEnrage()
+    {
+        if (isEnraged || !spawnedAsBoss || enrageHealthRatio <= 0f || maxHealth <= 0)
+            return;
+
+        if (health > maxHealth * enrageHealthRatio)
+            return;
+
+        isEnraged = true;
+        moveSpeed *= enrageMoveSpeedMultiplier;
+        if (agent != null && agent.enabled && hitStunRoutine == null)
+            agent.speed = moveSpeed;
+        if (animator != null && enrageAnimatorSpeed > 0f)
+            animator.speed = enrageAnimatorSpeed;
+
+        PlayHitFlash(enrageFlashColor, enrageFlashDuration);
     }
 
     void DropItem()

@@ -949,7 +949,7 @@ MonoBehaviour:
   - {fileID: 100001, guid: b3d6f92a1c7e8b45f8a0d2c4e6f7b9d1, type: 3}
   - {fileID: 100001, guid: a2c5e81f0b6d7a34e7f9c1b3d5e6a8c0, type: 3}
   - {fileID: 100001, guid: c4e7a03b2d8f9c56a9b1e3d5f7a8c0e2, type: 3}
-  dropChance: 1
+  dropChance: 0.35
   enemyType: 
   rotationSpeed: 1
 --- !u!195 &-378899208513864728

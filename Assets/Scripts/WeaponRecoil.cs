@@ -96,10 +96,6 @@ public class WeaponRecoil : MonoBehaviour
         targetRotation = Quaternion.Euler(recoilKickEuler.x, yaw, roll);
     }
 
-    public void SetFiringState(bool firing)
-    {
-    }
-
     public void SetReloadLock(bool locked)
     {
         recoilPaused = locked;

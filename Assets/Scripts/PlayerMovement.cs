@@ -53,6 +53,9 @@ public class PlayerMovement : MonoBehaviour
         if (playerHealth != null && playerHealth.isPlayerDie)
             return;
 
+        if (WaveRewardUI.IsOpen)
+            return;
+
         isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
         if (isGrounded && velocity.y < 0)
         {

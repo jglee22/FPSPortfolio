@@ -1543,10 +1543,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   dropItems:
-  - {fileID: 1296605364670726625, guid: 2bf0fa198835a4c448f8c6ecfc6fc1c1, type: 3}
-  - {fileID: 1296605364670726625, guid: 52c9b50c37830cd4cb6f906331d7cf6d, type: 3}
-  - {fileID: 4779774426286159891, guid: 1f57c00897155d44d82988c518060477, type: 3}
-  - {fileID: 4779774426286159891, guid: d8269a8616d8018459ed73de90572d7b, type: 3}
+  - {fileID: 100001, guid: b3d6f92a1c7e8b45f8a0d2c4e6f7b9d1, type: 3}
+  - {fileID: 100001, guid: a2c5e81f0b6d7a34e7f9c1b3d5e6a8c0, type: 3}
+  - {fileID: 100001, guid: c4e7a03b2d8f9c56a9b1e3d5f7a8c0e2, type: 3}
   dropChance: 1
   enemyType: 
   rotationSpeed: 1

@@ -11,15 +11,24 @@ public class WeaponRecoil : MonoBehaviour
 
     private Vector3 originalPosition;
     private Quaternion originalRotation;
-    private Vector3 kickPosition;
-    private Quaternion kickRotation;
+    private Vector3 recoilRestPosition;
+    private Quaternion recoilRestRotation = Quaternion.identity;
+    private Vector3 targetOffset;
+    private Quaternion targetRotation = Quaternion.identity;
+    private Vector3 appliedOffset;
+    private Quaternion appliedRotation = Quaternion.identity;
+    private Transform recoilTarget;
     private PlayerHealth playerHealth;
     private bool recoilPaused;
     private bool hasRestPose;
+    private bool hasRecoilRest;
 
     void Awake()
     {
         playerHealth = FindObjectOfType<PlayerHealth>();
+        if (weaponTransform == null)
+            weaponTransform = transform;
+        ResolveRecoilTarget();
     }
 
     void Start()
@@ -30,27 +39,48 @@ public class WeaponRecoil : MonoBehaviour
     void OnEnable()
     {
         CacheRestPose();
+        ResolveRecoilTarget();
+        ClearKick();
     }
 
-    void Update()
+    void OnDisable()
     {
-        if (recoilPaused || weaponTransform == null)
+        ApplyRestToView();
+    }
+
+    void LateUpdate()
+    {
+        if (recoilPaused)
             return;
 
-        kickPosition = Vector3.Lerp(kickPosition, originalPosition, Time.deltaTime * recoilSpeed);
-        kickRotation = Quaternion.Slerp(kickRotation, originalRotation, Time.deltaTime * recoilSpeed);
+        ResolveRecoilTarget();
+        if (recoilTarget == null)
+            return;
+
+        targetOffset = Vector3.Lerp(targetOffset, Vector3.zero, Time.deltaTime * recoilSpeed);
+        targetRotation = Quaternion.Slerp(targetRotation, Quaternion.identity, Time.deltaTime * recoilSpeed);
 
         float follow = Time.deltaTime * recoilFollowSpeed;
-        weaponTransform.localPosition = Vector3.Lerp(weaponTransform.localPosition, kickPosition, follow);
-        weaponTransform.localRotation = Quaternion.Slerp(weaponTransform.localRotation, kickRotation, follow);
+        appliedOffset = Vector3.Lerp(appliedOffset, targetOffset, follow);
+        appliedRotation = Quaternion.Slerp(appliedRotation, targetRotation, follow);
+
+        recoilTarget.localPosition = recoilRestPosition + appliedOffset;
+        recoilTarget.localRotation = recoilRestRotation * appliedRotation;
+    }
+
+    public void BindTransform(Transform target)
+    {
+        weaponTransform = target;
+        hasRestPose = false;
+        CacheRestPose();
     }
 
     public void ApplyRecoil()
     {
-        if (weaponTransform == null)
-            return;
+        if (recoilTarget == null)
+            ResolveRecoilTarget();
 
-        if (recoilPaused)
+        if (recoilTarget == null || recoilPaused)
             return;
 
         if (playerHealth != null && playerHealth.isPlayerDie)
@@ -58,12 +88,12 @@ public class WeaponRecoil : MonoBehaviour
 
         CacheRestPose();
 
-        kickPosition = originalPosition - Vector3.forward * recoilAmount;
-        kickPosition.z = Mathf.Clamp(kickPosition.z, originalPosition.z - maxRecoil, originalPosition.z);
+        targetOffset = Vector3.back * recoilAmount;
+        targetOffset.z = Mathf.Clamp(targetOffset.z, -maxRecoil, 0f);
 
         float yaw = Random.Range(-Mathf.Abs(recoilKickEuler.y), Mathf.Abs(recoilKickEuler.y));
         float roll = Random.Range(-Mathf.Abs(recoilKickEuler.z), Mathf.Abs(recoilKickEuler.z));
-        kickRotation = originalRotation * Quaternion.Euler(recoilKickEuler.x, yaw, roll);
+        targetRotation = Quaternion.Euler(recoilKickEuler.x, yaw, roll);
     }
 
     public void SetFiringState(bool firing)
@@ -73,8 +103,10 @@ public class WeaponRecoil : MonoBehaviour
     public void SetReloadLock(bool locked)
     {
         recoilPaused = locked;
-        if (!locked)
-            RestoreRestPose();
+        if (locked)
+            ApplyRestToView();
+        else
+            ClearKick();
     }
 
     public Vector3 RestLocalPosition
@@ -95,6 +127,25 @@ public class WeaponRecoil : MonoBehaviour
         }
     }
 
+    void ResolveRecoilTarget()
+    {
+        if (recoilTarget != null && hasRecoilRest)
+            return;
+
+        FPSViewModel viewModel = GetComponent<FPSViewModel>();
+        if (viewModel != null && viewModel.characterInstance != null)
+            recoilTarget = viewModel.characterInstance.transform;
+        else
+            recoilTarget = transform.parent != null ? transform.parent : transform;
+
+        if (recoilTarget == null || hasRecoilRest)
+            return;
+
+        recoilRestPosition = recoilTarget.localPosition;
+        recoilRestRotation = recoilTarget.localRotation;
+        hasRecoilRest = true;
+    }
+
     void CacheRestPose()
     {
         if (hasRestPose || weaponTransform == null)
@@ -102,20 +153,24 @@ public class WeaponRecoil : MonoBehaviour
 
         originalPosition = weaponTransform.localPosition;
         originalRotation = weaponTransform.localRotation;
-        kickPosition = originalPosition;
-        kickRotation = originalRotation;
         hasRestPose = true;
     }
 
-    void RestoreRestPose()
+    void ClearKick()
     {
-        if (weaponTransform == null)
+        targetOffset = Vector3.zero;
+        targetRotation = Quaternion.identity;
+        appliedOffset = Vector3.zero;
+        appliedRotation = Quaternion.identity;
+    }
+
+    void ApplyRestToView()
+    {
+        ClearKick();
+        if (recoilTarget == null || !hasRecoilRest)
             return;
 
-        CacheRestPose();
-        kickPosition = originalPosition;
-        kickRotation = originalRotation;
-        weaponTransform.localPosition = originalPosition;
-        weaponTransform.localRotation = originalRotation;
+        recoilTarget.localPosition = recoilRestPosition;
+        recoilTarget.localRotation = recoilRestRotation;
     }
 }

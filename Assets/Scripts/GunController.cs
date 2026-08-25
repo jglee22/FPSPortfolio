@@ -24,6 +24,9 @@ public class GunController : MonoBehaviour
         if (playerHealth != null && playerHealth.isPlayerDie)
             return;
 
+        if (WaveRewardUI.IsOpen)
+            return;
+
         if (Input.GetKeyDown(KeyCode.Alpha1))
             EquipGun(0);
         if (Input.GetKeyDown(KeyCode.Alpha2))

@@ -48,6 +48,16 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    public void Heal(int amount)
+    {
+        if (isPlayerDie || amount <= 0)
+            return;
+
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        healthBar.SetHealth(currentHealth);
+        healthText.text = currentHealth + " / " + maxHealth;
+    }
+
     void Die()
     {
         if (isPlayerDie)

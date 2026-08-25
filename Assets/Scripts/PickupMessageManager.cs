@@ -1,17 +1,22 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 public class PickupMessageManager : MonoBehaviour
 {
     public static PickupMessageManager Instance; // 싱글톤 패턴 적용
 
-    public GameObject pickupMessagePrefab; // 메시지 프리팹
-    public Transform pickupMessagePanel; // UI 패널 (메시지를 담는 부모)
+    public GameObject pickupMessagePrefab;
+    public Transform pickupMessagePanel;
+    public float appearOffsetY = 28f;
+    public float showDuration = 1.4f;
+    public float fadeDuration = 0.18f;
+    public float backgroundAlpha = 0.72f;
 
-    private Queue<string> messageQueue = new Queue<string>(); // 메시지 저장 큐
-    private bool isDisplayingMessage = false; // 현재 메시지 출력 여부
+    private Queue<string> messageQueue = new Queue<string>();
+    private bool isDisplayingMessage = false;
 
     private void Awake()
     {
@@ -46,29 +51,50 @@ public class PickupMessageManager : MonoBehaviour
         {
             string message = messageQueue.Dequeue();
 
-            // 1️⃣ 메시지 프리팹 생성
             GameObject newMessage = Instantiate(pickupMessagePrefab, pickupMessagePanel);
-            TextMeshProUGUI messageText = newMessage.GetComponentInChildren<TextMeshProUGUI>();
+            PrepareMessage(newMessage, message);
 
-            messageText.text = message;
-            newMessage.transform.localPosition = new Vector3(0, 200, 0); // 초기 위치 (화면 위)
+            RectTransform messageRect = newMessage.GetComponent<RectTransform>();
+            messageRect.anchoredPosition = new Vector2(0f, appearOffsetY);
 
-            // 2️⃣ DoTween으로 위에서 아래로 이동 애니메이션
-            newMessage.transform.DOLocalMoveY(-288, 0.5f).SetEase(Ease.OutBounce);
+            CanvasGroup canvasGroup = newMessage.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+                canvasGroup = newMessage.AddComponent<CanvasGroup>();
+            canvasGroup.alpha = 0f;
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.interactable = false;
 
-            // 3️⃣ 일정 시간 유지
-            yield return new WaitForSeconds(2f);
+            canvasGroup.DOFade(1f, fadeDuration);
+            messageRect.DOAnchorPosY(0f, fadeDuration).SetEase(Ease.OutQuad);
 
-            // 4️⃣ 위로 이동하면서 사라지는 애니메이션
-            newMessage.transform.DOLocalMoveY(200, 0.5f).SetEase(Ease.InQuad)
-                .OnComplete(() =>
-                {
-                    Destroy(newMessage);
-                });
+            yield return new WaitForSeconds(showDuration);
 
-            yield return new WaitForSeconds(0.5f); // 메시지가 완전히 사라진 후 다음 메시지 출력
+            canvasGroup.DOFade(0f, fadeDuration);
+            messageRect.DOAnchorPosY(appearOffsetY, fadeDuration).SetEase(Ease.InQuad)
+                .OnComplete(() => Destroy(newMessage));
+
+            yield return new WaitForSeconds(fadeDuration);
         }
 
         isDisplayingMessage = false;
+    }
+
+    void PrepareMessage(GameObject messageObject, string message)
+    {
+        TextMeshProUGUI messageText = messageObject.GetComponentInChildren<TextMeshProUGUI>();
+        if (messageText != null)
+        {
+            messageText.text = message;
+            messageText.raycastTarget = false;
+        }
+
+        Image[] images = messageObject.GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < images.Length; i++)
+        {
+            images[i].raycastTarget = false;
+            Color color = images[i].color;
+            color.a = backgroundAlpha;
+            images[i].color = color;
+        }
     }
 }

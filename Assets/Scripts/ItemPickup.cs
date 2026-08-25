@@ -1,40 +1,174 @@
-using System.Collections;
-using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public class ItemPickup : MonoBehaviour
 {
-    public WeaponUpgradeItem upgradeItem; // 아이템 데이터
-    public AudioClip pickupSound; // 획득 효과음 (옵션)
+    public ConsumableItem consumableItem;
+    public AudioClip pickupSound;
+    public float hoverHeight = 0.12f;
+    public float hoverSpeed = 2.4f;
+    public float spinSpeed = 50f;
+    public Color markerColor = new Color(1f, 0.82f, 0.22f, 0.95f);
+    public float beamHeight = 1.6f;
+    public float beamWidth = 0.07f;
+    public float lightRange = 3.5f;
+    public float lightIntensity = 1.6f;
+    public TMP_FontAsset labelFont;
+    public float labelHeight = 0.7f;
+    public float labelFontSize = 1.4f;
+
+    Vector3 basePosition;
+    Transform labelTransform;
+
+    void Start()
+    {
+        ApplyVisualColor();
+        CreateDropMarker();
+        CreateDropLabel();
+        IgnoreGunRaycasts();
+        basePosition = transform.position;
+    }
+
+    void IgnoreGunRaycasts()
+    {
+        int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+        if (ignoreRaycastLayer < 0)
+            return;
+
+        Transform[] transforms = GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < transforms.Length; i++)
+            transforms[i].gameObject.layer = ignoreRaycastLayer;
+    }
+
+    void Update()
+    {
+        transform.position = basePosition + Vector3.up * (Mathf.Sin(Time.time * hoverSpeed) * hoverHeight);
+        transform.Rotate(Vector3.up, spinSpeed * Time.deltaTime, Space.World);
+        FaceLabelToCamera();
+    }
+
+    void FaceLabelToCamera()
+    {
+        if (labelTransform == null || Camera.main == null)
+            return;
+
+        Vector3 cameraPosition = Camera.main.transform.position;
+        labelTransform.LookAt(labelTransform.position + (labelTransform.position - cameraPosition));
+    }
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
-        {
-            ApplyUpgrade(other.GetComponent<GunController>()); // 플레이어 무기 컨트롤러 전달
+        if (!other.CompareTag("Player"))
+            return;
 
-            if (pickupSound != null)
-                AudioSource.PlayClipAtPoint(pickupSound, transform.position);
+        PlayerHealth playerHealth = other.GetComponentInParent<PlayerHealth>();
+        if (playerHealth != null && playerHealth.isPlayerDie)
+            return;
 
-            // UI 매니저에게 메시지 전달
-            PickupMessageManager.Instance.EnqueuePickupMessage($"{upgradeItem.weaponType} 업그레이드 획득!");
+        if (consumableItem == null)
+            return;
 
-            Destroy(gameObject); // 아이템 제거
-        }
+        consumableItem.Apply(other.gameObject);
+
+        if (pickupSound != null)
+            AudioSource.PlayClipAtPoint(pickupSound, transform.position);
+
+        string message = GetPickupMessage();
+        if (PickupMessageManager.Instance != null && !string.IsNullOrEmpty(message))
+            PickupMessageManager.Instance.EnqueuePickupMessage(message);
+
+        Destroy(gameObject);
     }
 
-    void ApplyUpgrade(GunController gunController)
+    void CreateDropMarker()
     {
-        // 현재 장착 중인 무기 가져오기
-        Gun currentGun = gunController.GetCurrentGun();
+        GameObject marker = new GameObject("DropMarker");
+        marker.transform.SetParent(transform, false);
 
-        if (currentGun.gunName == upgradeItem.weaponType)
-        {
-            if (upgradeItem.increaseDamage)
-                currentGun.IncreaseDamage(upgradeItem.amount); // 데미지 증가
+        LineRenderer beam = marker.AddComponent<LineRenderer>();
+        beam.useWorldSpace = false;
+        beam.positionCount = 2;
+        beam.SetPosition(0, Vector3.zero);
+        beam.SetPosition(1, Vector3.up * beamHeight);
+        beam.startWidth = beamWidth;
+        beam.endWidth = 0.01f;
+        beam.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        beam.receiveShadows = false;
+        beam.material = CreateMarkerMaterial();
+        beam.startColor = markerColor;
+        beam.endColor = new Color(markerColor.r, markerColor.g, markerColor.b, 0f);
 
-            if (upgradeItem.increaseAmmo)
-                currentGun.IncreaseMaxAmmo(upgradeItem.amount); // 최대 탄수 증가
-        }
+        Light light = marker.AddComponent<Light>();
+        light.type = LightType.Point;
+        light.color = markerColor;
+        light.range = lightRange;
+        light.intensity = lightIntensity;
+        light.shadows = LightShadows.None;
+    }
+
+    void CreateDropLabel()
+    {
+        string labelText = GetPickupMessage();
+        if (string.IsNullOrEmpty(labelText) || labelFont == null)
+            return;
+
+        GameObject labelObject = new GameObject("DropLabel");
+        labelTransform = labelObject.transform;
+        labelTransform.SetParent(transform, false);
+
+        float parentScale = Mathf.Max(0.001f, transform.lossyScale.y);
+        labelTransform.localPosition = Vector3.up * (labelHeight / parentScale);
+        labelTransform.localScale = Vector3.one * (1f / parentScale);
+
+        TextMeshPro text = labelObject.AddComponent<TextMeshPro>();
+        text.font = labelFont;
+        text.text = labelText;
+        text.fontSize = labelFontSize;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = Color.white;
+        text.outlineWidth = 0.3f;
+        text.outlineColor = Color.black;
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.raycastTarget = false;
+        text.rectTransform.sizeDelta = new Vector2(labelFontSize * 12f, labelFontSize * 2f);
+    }
+
+    Material CreateMarkerMaterial()
+    {
+        Shader shader = Shader.Find("Sprites/Default");
+        if (shader == null)
+            shader = Shader.Find("Unlit/Color");
+
+        Material material = new Material(shader);
+        material.color = markerColor;
+        return material;
+    }
+
+    void ApplyVisualColor()
+    {
+        MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
+        if (meshRenderer == null)
+            return;
+
+        Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+        if (shader == null)
+            shader = Shader.Find("Unlit/Color");
+        if (shader == null)
+            shader = Shader.Find("Sprites/Default");
+        if (shader == null)
+            return;
+
+        Material material = new Material(shader);
+        material.color = markerColor;
+        meshRenderer.material = material;
+    }
+
+    string GetPickupMessage()
+    {
+        if (consumableItem != null && !string.IsNullOrEmpty(consumableItem.displayName))
+            return consumableItem.displayName;
+
+        return consumableItem != null ? consumableItem.type.ToString() : string.Empty;
     }
 }

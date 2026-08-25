@@ -7,22 +7,12 @@ using DG.Tweening;
 
 public class EnemyPoolManager : MonoBehaviour
 {
-    [System.Serializable]
-    public class EnemyType
-    {
-        public string name;
-        public GameObject prefab;
-        public int poolSize = 10;
-        public bool isBoss = false;
-    }
-
     public Transform enemyContainer;
-    public EnemyType[] enemyTypes;
+    public WaveData[] waves;
     public Transform[] spawnPoints;
+    public int defaultPoolSize = 8;
 
     public int waveNumber = 1;
-    public int enemiesPerWave = 5;
-    public int bossWaveInterval = 3;
     public TextMeshProUGUI waveText;
     public float waveDelay = 5f;
     public float waveClearBannerDuration = 1.8f;
@@ -33,6 +23,7 @@ public class EnemyPoolManager : MonoBehaviour
     public string waveStartFormat = "WAVE {0}";
     public string bossWarningText = "WARNING";
     public string bossWaveStartText = "BOSS WAVE";
+    public string missionClearText = "MISSION CLEAR";
     public Color waveBannerColor = Color.white;
     public Color bossBannerColor = new Color(1f, 0.28f, 0.22f, 1f);
     public string bossHealthLabel = "BOSS";
@@ -51,10 +42,14 @@ public class EnemyPoolManager : MonoBehaviour
     public bool spawnTestBoss = false;
 
     private bool isWaveActive = false;
+    private bool isSpawning = false;
+    private bool isRunComplete = false;
+    private int waveIndex = 0;
     private int startWaveNumber;
     private int enemiesAlive = 0;
     private PlayerHealth playerHealth;
     private Dictionary<string, Queue<GameObject>> enemyPools;
+    private Dictionary<string, EnemyData> enemyCatalog;
     private TextMeshProUGUI bannerText;
     private CanvasGroup bannerGroup;
     private Tween bannerTween;
@@ -69,27 +64,22 @@ public class EnemyPoolManager : MonoBehaviour
     {
         startWaveNumber = waveNumber;
         enemyPools = new Dictionary<string, Queue<GameObject>>();
+        enemyCatalog = new Dictionary<string, EnemyData>();
         playerHealth = FindObjectOfType<PlayerHealth>();
         CreateWaveBanner();
         CreateBossHealthBar();
         ApplyCanvasHudOutlines();
 
-        foreach (EnemyType enemyType in enemyTypes)
+        if (waves == null || waves.Length == 0)
         {
-            Queue<GameObject> pool = new Queue<GameObject>();
-            for (int i = 0; i < enemyType.poolSize; i++)
-            {
-                GameObject enemy = Instantiate(enemyType.prefab);
-                enemy.SetActive(false);
-                pool.Enqueue(enemy);
-            }
-            enemyPools[enemyType.name] = pool;
+            Debug.LogError("EnemyPoolManager: waves 배열이 비어 있습니다.");
+            return;
         }
 
-        SpawnWave();
-        UpdateWaveUI();
-        isWaveActive = true;
-        ShowWaveStartBanner();
+        BuildPoolsFromWaves();
+        waveIndex = spawnBossOnStart ? FindBossWaveIndex() : 0;
+        waveNumber = waveIndex + 1;
+        StartCoroutine(SpawnCurrentWave());
     }
 
     void Update()
@@ -100,10 +90,10 @@ public class EnemyPoolManager : MonoBehaviour
             SpawnTestBoss();
         }
 
-        if (IsPlayerDead())
+        if (IsPlayerDead() || isRunComplete)
             return;
 
-        if (isWaveActive && enemiesAlive <= 0 && nextWaveRoutine == null)
+        if (isWaveActive && !isSpawning && enemiesAlive <= 0 && nextWaveRoutine == null)
             nextWaveRoutine = StartCoroutine(StartNextWave());
     }
 
@@ -111,25 +101,49 @@ public class EnemyPoolManager : MonoBehaviour
     {
         isWaveActive = false;
         int clearedWave = waveNumber;
-        bool nextIsBoss = IsBossWave(clearedWave + 1);
+        bool isLastWave = waveIndex >= waves.Length - 1;
+
+        if (isLastWave)
+        {
+            ShowBanner(missionClearText, waveBannerColor, waveClearBannerDuration);
+            yield return new WaitForSeconds(waveClearBannerDuration);
+
+            MenuManager menuManager = FindObjectOfType<MenuManager>();
+            if (menuManager != null)
+                menuManager.ShowMissionClear();
+
+            isRunComplete = true;
+            nextWaveRoutine = null;
+            yield break;
+        }
+
+        WaveData nextWave = waves[waveIndex + 1];
+        bool nextIsBoss = nextWave != null && nextWave.isBossWave;
+        float delay = GetWaveDelay(nextWave);
 
         ShowBanner(string.Format(waveClearFormat, clearedWave), waveBannerColor, waveClearBannerDuration);
-
-        if (nextIsBoss && waveClearBannerDuration < waveDelay)
+        yield return WaitUnlessDead(waveClearBannerDuration);
+        if (IsPlayerDead())
         {
-            yield return WaitUnlessDead(waveClearBannerDuration);
-            if (IsPlayerDead())
-            {
-                nextWaveRoutine = null;
-                yield break;
-            }
+            nextWaveRoutine = null;
+            yield break;
+        }
 
-            ShowBanner(bossWarningText, bossBannerColor, waveDelay - waveClearBannerDuration);
-            yield return WaitUnlessDead(waveDelay - waveClearBannerDuration);
+        yield return ShowWaveReward();
+        if (IsPlayerDead())
+        {
+            nextWaveRoutine = null;
+            yield break;
+        }
+
+        if (nextIsBoss)
+        {
+            ShowBanner(bossWarningText, bossBannerColor, delay);
+            yield return WaitUnlessDead(delay);
         }
         else
         {
-            yield return WaitUnlessDead(waveDelay);
+            yield return WaitUnlessDead(delay);
         }
 
         if (IsPlayerDead())
@@ -138,17 +152,19 @@ public class EnemyPoolManager : MonoBehaviour
             yield break;
         }
 
-        waveNumber++;
-        enemiesPerWave += 2;
-
-        foreach (EnemyType enemyType in enemyTypes)
-            enemyType.poolSize += 5;
-
-        SpawnWave();
-        isWaveActive = true;
-        UpdateWaveUI();
-        ShowWaveStartBanner();
+        waveIndex++;
+        waveNumber = waveIndex + 1;
+        yield return SpawnCurrentWave();
         nextWaveRoutine = null;
+    }
+
+    IEnumerator ShowWaveReward()
+    {
+        WaveRewardUI rewardUI = GetComponent<WaveRewardUI>();
+        if (rewardUI == null)
+            yield break;
+
+        yield return rewardUI.ShowChoices();
     }
 
     IEnumerator WaitUnlessDead(float duration)
@@ -163,50 +179,78 @@ public class EnemyPoolManager : MonoBehaviour
         }
     }
 
-    void SpawnWave()
+    IEnumerator SpawnCurrentWave()
     {
-        for (int i = 0; i < enemiesPerWave; i++)
+        WaveData wave = GetCurrentWave();
+        isWaveActive = true;
+        isSpawning = true;
+        UpdateWaveUI();
+        ShowWaveStartBanner();
+
+        if (wave == null || wave.enemies == null)
         {
-            bool spawnBoss = IsBossWave(waveNumber) && i == enemiesPerWave - 1;
-            SpawnEnemy(spawnBoss);
+            Debug.LogError("EnemyPoolManager: 현재 WaveData가 비어 있습니다.");
+            isSpawning = false;
+            yield break;
         }
 
-        enemiesAlive = enemiesPerWave;
-    }
+        float interval = Mathf.Max(0f, wave.spawnInterval);
+        bool spawnedAny = false;
 
-    void SpawnEnemy(bool isBoss)
-    {
-        EnemyType selectedEnemy;
+        for (int i = 0; i < wave.enemies.Length; i++)
+        {
+            WaveEnemyEntry entry = wave.enemies[i];
+            if (entry == null || entry.enemyData == null)
+                continue;
 
-        if (isBoss)
-        {
-            selectedEnemy = System.Array.Find(enemyTypes, e => e.isBoss);
-            if (selectedEnemy == null)
-                selectedEnemy = enemyTypes[0];
-        }
-        else
-        {
-            int enemyTypeIndex = Random.Range(0, enemyTypes.Length);
-            selectedEnemy = enemyTypes[enemyTypeIndex];
-            int attempts = 0;
-            while (selectedEnemy.isBoss && attempts < enemyTypes.Length)
+            for (int n = 0; n < entry.count; n++)
             {
-                enemyTypeIndex = (enemyTypeIndex + 1) % enemyTypes.Length;
-                selectedEnemy = enemyTypes[enemyTypeIndex];
-                attempts++;
+                if (IsPlayerDead())
+                {
+                    isSpawning = false;
+                    yield break;
+                }
+
+                if (spawnedAny && interval > 0f)
+                    yield return WaitUnlessDead(interval);
+
+                if (IsPlayerDead())
+                {
+                    isSpawning = false;
+                    yield break;
+                }
+
+                SpawnEnemy(entry.enemyData, wave);
+                spawnedAny = true;
             }
         }
 
-        if (enemyPools[selectedEnemy.name].Count == 0)
-            ExpandPool(selectedEnemy);
+        isSpawning = false;
+    }
+
+    void SpawnEnemy(EnemyData enemyData, WaveData waveData)
+    {
+        if (enemyData == null || enemyData.prefab == null)
+        {
+            Debug.LogError("EnemyPoolManager: EnemyData 또는 prefab이 없습니다.");
+            return;
+        }
+
+        string key = GetPoolKey(enemyData);
+        if (!enemyPools.ContainsKey(key))
+            CreatePool(enemyData);
+
+        if (enemyPools[key].Count == 0)
+            ExpandPool(enemyData);
 
         int spawnIndex = Random.Range(0, spawnPoints.Length);
         Transform spawnPoint = spawnPoints[spawnIndex];
 
-        GameObject enemy = enemyPools[selectedEnemy.name].Dequeue();
+        GameObject enemy = enemyPools[key].Dequeue();
         enemy.transform.position = spawnPoint.position;
         enemy.transform.rotation = spawnPoint.rotation;
         enemy.SetActive(true);
+        enemiesAlive++;
 
         if (EnemyCounterManager.Instance != null)
             EnemyCounterManager.Instance.AddEnemy();
@@ -214,24 +258,101 @@ public class EnemyPoolManager : MonoBehaviour
         EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
         if (enemyAI != null)
         {
-            enemyAI.enemyType = selectedEnemy.name;
-            enemyAI.InitializeForSpawn(waveNumber, isBoss);
+            enemyAI.enemyType = key;
+            enemyAI.InitializeForSpawn(enemyData, waveData);
             enemyAI.OnDeath -= EnemyDied;
             enemyAI.OnDeath += EnemyDied;
 
-            if (isBoss)
+            if (enemyData.isBoss)
                 ShowBossHealth(enemyAI);
         }
     }
 
-    void ExpandPool(EnemyType enemyType)
+    void BuildPoolsFromWaves()
     {
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < waves.Length; i++)
         {
-            GameObject enemy = Instantiate(enemyType.prefab, enemyContainer);
-            enemy.SetActive(false);
-            enemyPools[enemyType.name].Enqueue(enemy);
+            WaveData wave = waves[i];
+            if (wave == null || wave.enemies == null)
+                continue;
+
+            for (int e = 0; e < wave.enemies.Length; e++)
+            {
+                EnemyData enemyData = wave.enemies[e] != null ? wave.enemies[e].enemyData : null;
+                if (enemyData == null)
+                    continue;
+
+                string key = GetPoolKey(enemyData);
+                if (enemyCatalog.ContainsKey(key))
+                    continue;
+
+                enemyCatalog[key] = enemyData;
+                CreatePool(enemyData);
+            }
         }
+    }
+
+    void CreatePool(EnemyData enemyData)
+    {
+        string key = GetPoolKey(enemyData);
+        if (enemyPools.ContainsKey(key))
+            return;
+
+        Queue<GameObject> pool = new Queue<GameObject>();
+        int poolSize = Mathf.Max(1, defaultPoolSize);
+        for (int i = 0; i < poolSize; i++)
+            pool.Enqueue(CreatePooledEnemy(enemyData));
+
+        enemyPools[key] = pool;
+    }
+
+    void ExpandPool(EnemyData enemyData)
+    {
+        string key = GetPoolKey(enemyData);
+        for (int i = 0; i < 5; i++)
+            enemyPools[key].Enqueue(CreatePooledEnemy(enemyData));
+    }
+
+    GameObject CreatePooledEnemy(EnemyData enemyData)
+    {
+        GameObject enemy = Instantiate(enemyData.prefab, enemyContainer);
+        enemy.SetActive(false);
+        return enemy;
+    }
+
+    string GetPoolKey(EnemyData enemyData)
+    {
+        if (enemyData == null)
+            return string.Empty;
+
+        return string.IsNullOrEmpty(enemyData.enemyName) ? enemyData.name : enemyData.enemyName;
+    }
+
+    WaveData GetCurrentWave()
+    {
+        if (waves == null || waveIndex < 0 || waveIndex >= waves.Length)
+            return null;
+
+        return waves[waveIndex];
+    }
+
+    float GetWaveDelay(WaveData wave)
+    {
+        if (wave != null && wave.waveDelay > 0f)
+            return wave.waveDelay;
+
+        return waveDelay;
+    }
+
+    int FindBossWaveIndex()
+    {
+        for (int i = 0; i < waves.Length; i++)
+        {
+            if (waves[i] != null && waves[i].isBossWave)
+                return i;
+        }
+
+        return Mathf.Max(0, waves.Length - 1);
     }
 
     void UpdateWaveUI()
@@ -244,34 +365,36 @@ public class EnemyPoolManager : MonoBehaviour
 
     void ShowWaveStartBanner()
     {
-        if (IsBossWave(waveNumber))
+        WaveData wave = GetCurrentWave();
+        if (wave != null && wave.isBossWave)
             ShowBanner(bossWaveStartText, bossBannerColor, waveStartBannerDuration);
         else
             ShowBanner(string.Format(waveStartFormat, waveNumber), waveBannerColor, waveStartBannerDuration);
     }
 
-    bool IsBossWave(int wave)
-    {
-        if (spawnBossOnStart && wave == startWaveNumber)
-            return true;
-
-        return bossWaveInterval > 0 && wave > 0 && wave % bossWaveInterval == 0;
-    }
-
     [ContextMenu("Spawn Test Boss")]
     public void SpawnTestBoss()
     {
-        if (enemyPools == null || enemyTypes == null || enemyTypes.Length == 0)
-            return;
-
-        if (spawnPoints == null || spawnPoints.Length == 0)
+        if (enemyCatalog == null || spawnPoints == null || spawnPoints.Length == 0)
             return;
 
         if (IsPlayerDead())
             return;
 
-        SpawnEnemy(true);
-        enemiesAlive++;
+        EnemyData bossData = null;
+        foreach (KeyValuePair<string, EnemyData> pair in enemyCatalog)
+        {
+            if (pair.Value != null && pair.Value.isBoss)
+            {
+                bossData = pair.Value;
+                break;
+            }
+        }
+
+        if (bossData == null)
+            return;
+
+        SpawnEnemy(bossData, GetCurrentWave());
     }
 
     bool IsPlayerDead()

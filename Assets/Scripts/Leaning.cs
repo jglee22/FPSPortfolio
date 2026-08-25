@@ -21,6 +21,8 @@ public class Leaning : MonoBehaviour
     {
         if (playerHealth != null && playerHealth.isPlayerDie)
             targetLean = 0f;
+        else if (WaveRewardUI.IsOpen)
+            targetLean = 0f;
         else if (Input.GetKey(KeyCode.Q))
             targetLean = leanAngle;
         else if (Input.GetKey(KeyCode.E))

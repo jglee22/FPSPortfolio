@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ec1df92a6591de74db7bc98fe4dbab9a, type: 3}
-  m_Name: WaveData_2
+  m_Name: WaveData_5
   m_EditorClassIdentifier: 
   enemies:
-  - enemyData: {fileID: 11400000, guid: 06f58824a8596ef4f8c9cb76bfc69856, type: 2}
-    count: 7
-  spawnInterval: 1
+  - enemyData: {fileID: 11400000, guid: c74f50a275472874aa2559a62a04174d, type: 2}
+    count: 1
+  spawnInterval: 0
   waveDelay: 5
-  isBossWave: 0
+  isBossWave: 1
   healthMultiplier: 1
   damageMultiplier: 1
   speedMultiplier: 1

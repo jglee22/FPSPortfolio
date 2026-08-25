@@ -19,6 +19,7 @@ public class Gun : MonoBehaviour
     public string gunName;
 
     public int maxAmmo = 30;
+    public bool lockMaxAmmo;
     public int currentAmmo;
     public float reloadTime = 2f;
     private bool isReloading = false;
@@ -26,6 +27,9 @@ public class Gun : MonoBehaviour
     private Coroutine shotgunCooldownRoutine;
 
     public float fireRate = 0.1f;
+    public float minFireRate = 0.05f;
+    public float minReloadTime = 0.5f;
+    public float minShotgunCooldownTime = 0.35f;
     private float nextTimeToFire = 0f;
     [SerializeField] private bool isAutoFire = true;
 
@@ -75,6 +79,7 @@ public class Gun : MonoBehaviour
 
     private GunRecoil gunRecoil;
     private WeaponRecoil weaponRecoil;
+    private FPSViewModel viewModel;
     private PlayerHealth playerHealth;
     private Tween reloadTween;
     private Vector3 magazineRestPosition;
@@ -85,6 +90,17 @@ public class Gun : MonoBehaviour
     private bool hasPumpRestPose;
     private GameObject spawnedReloadShell;
     public float recoilSpread = 10f;
+
+    void Awake()
+    {
+        viewModel = GetComponent<FPSViewModel>();
+    }
+
+    void OnEnable()
+    {
+        if (viewModel != null)
+            viewModel.Build();
+    }
 
     void Start()
     {
@@ -99,6 +115,12 @@ public class Gun : MonoBehaviour
     void Update()
     {
         if (playerHealth != null && playerHealth.isPlayerDie)
+        {
+            SetRecoilFiring(false);
+            return;
+        }
+
+        if (WaveRewardUI.IsOpen)
         {
             SetRecoilFiring(false);
             return;
@@ -120,7 +142,7 @@ public class Gun : MonoBehaviour
 
         if (!IsPointerOverUI())
         {
-            if (!isAutoFire && Input.GetButtonDown("Fire1") && currentAmmo > 0)
+            if (!isAutoFire && Input.GetMouseButtonDown(0) && currentAmmo > 0)
             {
                 if (gunType == GunType.Shotgun && isShotgunCooldown)
                     return;
@@ -132,7 +154,7 @@ public class Gun : MonoBehaviour
 
                 SetRecoilFiring(true);
             }
-            else if (isAutoFire && Input.GetButton("Fire1") && currentAmmo > 0 && Time.time >= nextTimeToFire)
+            else if (isAutoFire && Input.GetMouseButton(0) && currentAmmo > 0 && Time.time >= nextTimeToFire)
             {
                 nextTimeToFire = Time.time + fireRate;
                 Shoot();
@@ -140,7 +162,7 @@ public class Gun : MonoBehaviour
             }
         }
 
-        if (Input.GetButtonUp("Fire1"))
+        if (Input.GetMouseButtonUp(0))
             SetRecoilFiring(false);
 
         UpdateCrosshair();
@@ -169,6 +191,9 @@ public class Gun : MonoBehaviour
     void Shoot()
     {
         ApplyRecoil();
+
+        if (viewModel != null)
+            viewModel.PlayFire();
 
         PlayFireSound();
         PlayMuzzleFlash();
@@ -272,7 +297,10 @@ public class Gun : MonoBehaviour
     {
         isReloading = true;
         SetRecoilFiring(false);
-        PlayReloadMotion();
+        if (viewModel != null)
+            viewModel.PlayReload();
+        else
+            PlayReloadMotion();
 
         if (gunAudioSource != null && reloadSound != null)
             gunAudioSource.PlayOneShot(reloadSound);
@@ -357,10 +385,11 @@ public class Gun : MonoBehaviour
 
     void ResolveReloadParts()
     {
+        Transform searchRoot = transform;
         if (magazinePart == null)
-            magazinePart = FindDescendant(transform, magazinePartName);
+            magazinePart = FindDescendant(searchRoot, magazinePartName);
         if (pumpPart == null)
-            pumpPart = FindDescendant(transform, pumpPartName);
+            pumpPart = FindDescendant(searchRoot, pumpPartName);
 
         if (magazinePart != null && !hasMagazineRestPose)
         {
@@ -480,7 +509,37 @@ public class Gun : MonoBehaviour
 
     public void IncreaseMaxAmmo(int amount)
     {
+        if (lockMaxAmmo)
+            return;
+
         maxAmmo += amount;
+        UpdateUI();
+    }
+
+    public void RestoreAmmo(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        currentAmmo = Mathf.Min(maxAmmo, currentAmmo + amount);
+        UpdateUI();
+    }
+
+    public void MultiplyReloadTime(float multiplier)
+    {
+        if (multiplier <= 0f)
+            return;
+
+        reloadTime = Mathf.Max(minReloadTime, reloadTime * multiplier);
+    }
+
+    public void MultiplyFireRate(float multiplier)
+    {
+        if (multiplier <= 0f)
+            return;
+
+        fireRate = Mathf.Max(minFireRate, fireRate * multiplier);
+        shotgunCooldownTime = Mathf.Max(minShotgunCooldownTime, shotgunCooldownTime * multiplier);
     }
 
     void SetRecoilFiring(bool firing)

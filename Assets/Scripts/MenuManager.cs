@@ -17,6 +17,7 @@ public class MenuManager : MonoBehaviour
     public string lobbySceneName = "Lobby";
     public float gameOverDelay = 0.75f;
     public string gameOverTitle = "GAME OVER";
+    public string missionClearTitle = "MISSION CLEAR";
     public string retryButtonLabel = "다시 시작";
     public string lobbyButtonLabel = "로비 이동";
     public string newBestLabel = "신기록";
@@ -25,6 +26,7 @@ public class MenuManager : MonoBehaviour
     bool isGameOver;
     bool isLeavingScene;
     GameObject gameOverPanel;
+    TextMeshProUGUI resultTitleText;
     TextMeshProUGUI gameOverScoreText;
     TextMeshProUGUI gameOverHighScoreText;
     TextMeshProUGUI newBestText;
@@ -34,12 +36,15 @@ public class MenuManager : MonoBehaviour
         resumeButton.onClick.AddListener(ResumeGame);
         lobbyButton.onClick.AddListener(GoToLobby);
         quitButton.onClick.AddListener(QuitGame);
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(false);
         CreateGameOverPanel();
+        SetMenuCanvasVisible(false);
     }
 
     void Update()
     {
-        if (isGameOver || isLeavingScene)
+        if (isGameOver || isLeavingScene || WaveRewardUI.IsOpen)
             return;
 
         if (Input.GetKeyDown(KeyCode.Escape))
@@ -53,7 +58,7 @@ public class MenuManager : MonoBehaviour
 
     public void PauseGame()
     {
-        if (isGameOver)
+        if (isGameOver || WaveRewardUI.IsOpen)
             return;
 
         SetMenuCanvasVisible(true);
@@ -80,15 +85,30 @@ public class MenuManager : MonoBehaviour
 
     public void ShowGameOver()
     {
+        ShowResult(gameOverTitle);
+    }
+
+    public void ShowMissionClear()
+    {
+        ShowResult(missionClearTitle);
+    }
+
+    void ShowResult(string title)
+    {
         if (isGameOver)
             return;
 
         isGameOver = true;
+        if (resultTitleText != null)
+            resultTitleText.text = title;
         StartCoroutine(ShowGameOverRoutine());
     }
 
     public void GoToLobby()
     {
+        if (WaveRewardUI.IsOpen)
+            return;
+
         LoadSceneWithFade(lobbySceneName);
     }
 
@@ -183,7 +203,7 @@ public class MenuManager : MonoBehaviour
         overlay.raycastTarget = true;
         gameOverPanel.SetActive(false);
 
-        CreateLabel("Title", gameOverPanel.transform, gameOverTitle, 92f, new Vector2(0f, 220f), new Vector2(900f, 120f));
+        resultTitleText = CreateLabel("Title", gameOverPanel.transform, gameOverTitle, 92f, new Vector2(0f, 220f), new Vector2(900f, 120f));
         gameOverScoreText = CreateLabel("Score", gameOverPanel.transform, "현재 점수 : 0", 42f, new Vector2(0f, 80f), new Vector2(800f, 60f));
         gameOverHighScoreText = CreateLabel("HighScore", gameOverPanel.transform, "최고 점수 : 0", 36f, new Vector2(0f, 20f), new Vector2(800f, 50f));
         newBestText = CreateLabel("NewBest", gameOverPanel.transform, newBestLabel, 32f, new Vector2(0f, -40f), new Vector2(400f, 40f));

@@ -22,6 +22,7 @@ public class EnemyAI : MonoBehaviour
 
     public GameObject[] dropItems;
     public float dropChance = 1f;
+    public float dropHeight = 1f;
 
     [SerializeField] int healthPerWave = 10;
     [SerializeField] float speedPerWave = 0.1f;
@@ -85,23 +86,23 @@ public class EnemyAI : MonoBehaviour
         poolManager = FindObjectOfType<EnemyPoolManager>();
     }
 
-    public void InitializeForSpawn(int waveNumber, bool isBoss)
+    public void InitializeForSpawn(EnemyData enemyData, WaveData waveData)
     {
         CacheBaseStats();
         ResetCombatState();
 
-        health = baseHealth + waveNumber * healthPerWave;
-        moveSpeed = baseMoveSpeed + waveNumber * speedPerWave;
-        attackDamage = baseAttackDamage + waveNumber * damagePerWave;
+        float healthMul = waveData != null ? waveData.healthMultiplier : 1f;
+        float damageMul = waveData != null ? waveData.damageMultiplier : 1f;
+        float speedMul = waveData != null ? waveData.speedMultiplier : 1f;
 
-        if (isBoss)
-        {
-            health += waveNumber * bossHealthPerWave;
-            attackDamage += waveNumber * bossDamagePerWave;
-            moveSpeed += bossSpeedBonus;
-        }
+        int sourceHealth = enemyData != null ? enemyData.maxHealth : baseHealth;
+        int sourceDamage = enemyData != null ? enemyData.attackDamage : baseAttackDamage;
+        float sourceSpeed = enemyData != null ? enemyData.moveSpeed : baseMoveSpeed;
 
-        spawnedAsBoss = isBoss;
+        health = Mathf.Max(1, Mathf.RoundToInt(sourceHealth * healthMul));
+        attackDamage = Mathf.Max(1, Mathf.RoundToInt(sourceDamage * damageMul));
+        moveSpeed = sourceSpeed * speedMul;
+        spawnedAsBoss = enemyData != null && enemyData.isBoss;
         maxHealth = health;
         OnHealthChanged?.Invoke(health, maxHealth);
 
@@ -297,7 +298,7 @@ public class EnemyAI : MonoBehaviour
         isDead = true;
         DropItem();
 
-        int score = enemyType == "Normal" ? 100 : 300;
+        int score = spawnedAsBoss ? 300 : 100;
         if (ScoreManager.Instance != null)
             ScoreManager.Instance.AddScore(score);
 
@@ -489,7 +490,7 @@ public class EnemyAI : MonoBehaviour
         if (Random.value < dropChance)
         {
             int randomIndex = Random.Range(0, dropItems.Length);
-            Instantiate(dropItems[randomIndex], transform.position, Quaternion.identity);
+            Instantiate(dropItems[randomIndex], transform.position + Vector3.up * dropHeight, Quaternion.identity);
         }
     }
 

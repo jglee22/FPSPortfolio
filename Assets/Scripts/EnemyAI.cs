@@ -28,6 +28,7 @@ public class EnemyAI : MonoBehaviour
     private Animator animator;
     private CapsuleCollider capsuleCollider;
     private Collider[] bodyColliders;
+    private Renderer[] bodyRenderers;
     private bool isAttacking = false;
     private bool isDead = false;
     private bool isRotatingAfterAttack = false;
@@ -71,6 +72,7 @@ public class EnemyAI : MonoBehaviour
         animator = GetComponent<Animator>();
         capsuleCollider = GetComponent<CapsuleCollider>();
         bodyColliders = GetComponentsInChildren<Collider>(true);
+        bodyRenderers = GetComponentsInChildren<Renderer>(true);
         CacheBaseStats();
     }
 
@@ -98,6 +100,7 @@ public class EnemyAI : MonoBehaviour
         int sourceHealth = enemyData != null ? enemyData.maxHealth : baseHealth;
         int sourceDamage = enemyData != null ? enemyData.attackDamage : baseAttackDamage;
         float sourceSpeed = enemyData != null ? enemyData.moveSpeed : baseMoveSpeed;
+        float sourceAnimSpeed = enemyData != null && enemyData.animatorSpeed > 0f ? enemyData.animatorSpeed : 1f;
 
         health = Mathf.Max(1, Mathf.RoundToInt(sourceHealth * healthMul));
         attackDamage = Mathf.Max(1, Mathf.RoundToInt(sourceDamage * damageMul));
@@ -115,6 +118,7 @@ public class EnemyAI : MonoBehaviour
             agent.enabled = true;
             agent.isStopped = false;
             agent.speed = moveSpeed;
+            agent.acceleration = Mathf.Max(8f, moveSpeed * 2.5f);
             agent.ResetPath();
         }
 
@@ -122,7 +126,7 @@ public class EnemyAI : MonoBehaviour
 
         if (animator != null)
         {
-            animator.speed = 1f;
+            animator.speed = sourceAnimSpeed;
             animator.SetBool("isDead", false);
             animator.SetBool("isMoving", false);
             animator.SetBool("isAttacking", false);
@@ -290,7 +294,7 @@ public class EnemyAI : MonoBehaviour
 
         int score = spawnedAsBoss ? 300 : 100;
         if (ScoreManager.Instance != null)
-            ScoreManager.Instance.AddScore(score);
+            ScoreManager.Instance.RegisterKill(score);
 
         StopHitStun();
         CombatHitFeedback.PlayDeathSound(transform.position);
@@ -305,6 +309,7 @@ public class EnemyAI : MonoBehaviour
 
         if (animator != null)
         {
+            animator.speed = 1f;
             animator.SetBool("isMoving", false);
             animator.SetBool("isAttacking", false);
             animator.SetBool("isDead", true);
@@ -441,7 +446,9 @@ public class EnemyAI : MonoBehaviour
 
     IEnumerator HitFlashRoutine(Color flashColor, float duration)
     {
-        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        if (bodyRenderers == null)
+            bodyRenderers = GetComponentsInChildren<Renderer>(true);
+
         MaterialPropertyBlock block = new MaterialPropertyBlock();
         float elapsed = 0f;
 
@@ -450,14 +457,14 @@ public class EnemyAI : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = 1f - (elapsed / duration);
             Color emission = flashColor * (2f * t);
-            for (int i = 0; i < renderers.Length; i++)
+            for (int i = 0; i < bodyRenderers.Length; i++)
             {
-                if (renderers[i] == null)
+                if (bodyRenderers[i] == null)
                     continue;
 
-                renderers[i].GetPropertyBlock(block);
+                bodyRenderers[i].GetPropertyBlock(block);
                 block.SetColor(EmissionColorId, emission);
-                renderers[i].SetPropertyBlock(block);
+                bodyRenderers[i].SetPropertyBlock(block);
             }
 
             yield return null;
@@ -469,11 +476,13 @@ public class EnemyAI : MonoBehaviour
 
     void ClearHitFlash()
     {
-        Renderer[] renderers = GetComponentsInChildren<Renderer>();
-        for (int i = 0; i < renderers.Length; i++)
+        if (bodyRenderers == null)
+            bodyRenderers = GetComponentsInChildren<Renderer>(true);
+
+        for (int i = 0; i < bodyRenderers.Length; i++)
         {
-            if (renderers[i] != null)
-                renderers[i].SetPropertyBlock(null);
+            if (bodyRenderers[i] != null)
+                bodyRenderers[i].SetPropertyBlock(null);
         }
     }
 

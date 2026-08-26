@@ -27,6 +27,7 @@ public class CombatHitFeedback : MonoBehaviour
     public Color hitMarkerColor = Color.white;
     public Color killMarkerColor = new Color(1f, 0.82f, 0.22f, 1f);
     public float hitMarkerDuration = 0.09f;
+    public Canvas hudCanvas;
 
     AudioSource feedbackAudio;
     ParticleSystem bloodEmitter;
@@ -243,6 +244,9 @@ public class CombatHitFeedback : MonoBehaviour
 
     Canvas FindHudCanvas()
     {
+        if (hudCanvas != null && hudCanvas.isActiveAndEnabled)
+            return hudCanvas;
+
         Canvas[] canvases = FindObjectsOfType<Canvas>();
         for (int i = 0; i < canvases.Length; i++)
         {

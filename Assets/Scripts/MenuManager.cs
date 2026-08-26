@@ -21,6 +21,11 @@ public class MenuManager : MonoBehaviour
     public string retryButtonLabel = "다시 시작";
     public string lobbyButtonLabel = "로비 이동";
     public string newBestLabel = "신기록";
+    public string currentScoreFormat = "현재 점수 : {0}";
+    public string highScoreFormat = "최고 점수 : {0}";
+    public string comboRecordFormat = "최고 콤보 : x{0}  /  기록 x{1}";
+    public string clearTimeFormat = "클리어 : {0}  /  최단 {1}";
+    public string surviveTimeFormat = "생존 : {0}  /  최단 {1}";
 
     bool isPaused;
     bool isGameOver;
@@ -30,6 +35,8 @@ public class MenuManager : MonoBehaviour
     TextMeshProUGUI resultTitleText;
     TextMeshProUGUI gameOverScoreText;
     TextMeshProUGUI gameOverHighScoreText;
+    TextMeshProUGUI gameOverComboText;
+    TextMeshProUGUI gameOverTimeText;
     TextMeshProUGUI newBestText;
 
     public static bool IsInputBlocked
@@ -107,21 +114,23 @@ public class MenuManager : MonoBehaviour
 
     public void ShowGameOver()
     {
-        ShowResult(gameOverTitle);
+        ShowResult(gameOverTitle, false);
     }
 
     public void ShowMissionClear()
     {
-        ShowResult(missionClearTitle);
+        ShowResult(missionClearTitle, true);
     }
 
-    void ShowResult(string title)
+    void ShowResult(string title, bool cleared)
     {
         if (isGameOver)
             return;
 
         isGameOver = true;
-        CombatHitFeedback.PlayUi(title == missionClearTitle ? 1.12f : 0.7f);
+        if (ScoreManager.Instance != null)
+            ScoreManager.Instance.StopRun(cleared);
+        CombatHitFeedback.PlayUi(cleared ? 1.12f : 0.7f);
         if (resultTitleText != null)
             resultTitleText.text = title;
         StartCoroutine(ShowGameOverRoutine());
@@ -196,6 +205,11 @@ public class MenuManager : MonoBehaviour
     {
         int score = 0;
         int highScore = 0;
+        int combo = 0;
+        int bestCombo = 0;
+        float runTime = 0f;
+        float bestClearTime = 0f;
+        bool missionCleared = false;
         bool isNewBest = false;
 
         if (ScoreManager.Instance != null)
@@ -203,13 +217,27 @@ public class MenuManager : MonoBehaviour
             ScoreManager.Instance.PersistHighScore();
             score = ScoreManager.Instance.score;
             highScore = ScoreManager.Instance.highScore;
-            isNewBest = ScoreManager.Instance.HasNewHighScore;
+            combo = ScoreManager.Instance.BestComboThisRun;
+            bestCombo = ScoreManager.Instance.BestCombo;
+            runTime = ScoreManager.Instance.RunTime;
+            bestClearTime = ScoreManager.Instance.BestClearTime;
+            missionCleared = ScoreManager.Instance.MissionCleared;
+            isNewBest = ScoreManager.Instance.HasAnyNewRecord;
         }
 
         if (gameOverScoreText != null)
-            gameOverScoreText.text = "현재 점수 : " + score;
+            gameOverScoreText.text = string.Format(currentScoreFormat, score);
         if (gameOverHighScoreText != null)
-            gameOverHighScoreText.text = "최고 점수 : " + highScore;
+            gameOverHighScoreText.text = string.Format(highScoreFormat, highScore);
+        if (gameOverComboText != null)
+            gameOverComboText.text = string.Format(comboRecordFormat, combo, bestCombo);
+        if (gameOverTimeText != null)
+        {
+            string timeText = ScoreSave.FormatTime(runTime);
+            string bestClearText = ScoreSave.FormatClearRecord(bestClearTime);
+            string timeFormat = missionCleared ? clearTimeFormat : surviveTimeFormat;
+            gameOverTimeText.text = string.Format(timeFormat, timeText, bestClearText);
+        }
         if (newBestText != null)
             newBestText.gameObject.SetActive(isNewBest);
     }
@@ -227,17 +255,19 @@ public class MenuManager : MonoBehaviour
         overlay.raycastTarget = true;
         gameOverPanel.SetActive(false);
 
-        resultTitleText = CreateLabel("Title", gameOverPanel.transform, gameOverTitle, 92f, new Vector2(0f, 220f), new Vector2(900f, 120f));
-        gameOverScoreText = CreateLabel("Score", gameOverPanel.transform, "현재 점수 : 0", 42f, new Vector2(0f, 80f), new Vector2(800f, 60f));
-        gameOverHighScoreText = CreateLabel("HighScore", gameOverPanel.transform, "최고 점수 : 0", 36f, new Vector2(0f, 20f), new Vector2(800f, 50f));
-        newBestText = CreateLabel("NewBest", gameOverPanel.transform, newBestLabel, 32f, new Vector2(0f, -40f), new Vector2(400f, 40f));
+        resultTitleText = CreateLabel("Title", gameOverPanel.transform, gameOverTitle, 92f, new Vector2(0f, 240f), new Vector2(900f, 120f));
+        gameOverScoreText = CreateLabel("Score", gameOverPanel.transform, string.Format(currentScoreFormat, 0), 42f, new Vector2(0f, 110f), new Vector2(800f, 60f));
+        gameOverHighScoreText = CreateLabel("HighScore", gameOverPanel.transform, string.Format(highScoreFormat, 0), 32f, new Vector2(0f, 58f), new Vector2(800f, 44f));
+        gameOverComboText = CreateLabel("Combo", gameOverPanel.transform, string.Format(comboRecordFormat, 0, 0), 32f, new Vector2(0f, 14f), new Vector2(800f, 44f));
+        gameOverTimeText = CreateLabel("Time", gameOverPanel.transform, string.Format(surviveTimeFormat, "-", "-"), 32f, new Vector2(0f, -30f), new Vector2(800f, 44f));
+        newBestText = CreateLabel("NewBest", gameOverPanel.transform, newBestLabel, 32f, new Vector2(0f, -78f), new Vector2(400f, 40f));
         newBestText.color = new Color(1f, 0.78f, 0.25f, 1f);
         newBestText.gameObject.SetActive(false);
 
-        Button retry = CreateMenuButton("RetryButton", gameOverPanel.transform, retryButtonLabel, new Vector2(0f, -150f));
+        Button retry = CreateMenuButton("RetryButton", gameOverPanel.transform, retryButtonLabel, new Vector2(0f, -175f));
         retry.onClick.AddListener(RetryGame);
 
-        Button lobby = CreateMenuButton("LobbyButton", gameOverPanel.transform, lobbyButtonLabel, new Vector2(0f, -260f));
+        Button lobby = CreateMenuButton("LobbyButton", gameOverPanel.transform, lobbyButtonLabel, new Vector2(0f, -280f));
         lobby.onClick.AddListener(GoToLobby);
     }
 

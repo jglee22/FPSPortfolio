@@ -3,7 +3,8 @@
 웨이브를 클리어하는 1인칭 슈팅 포트폴리오입니다.  
 Unity 2021.3.39f1 LTS + URP.
 
-적 웨이브 1~5를 막으면서 아이템·강화를 모으고, 보스 웨이브 후 Mission Clear가 목표입니다.
+적 웨이브 1~5를 막으면서 아이템·강화를 모으고, 보스 웨이브 후 Mission Clear가 목표입니다.  
+같은 5웨이브에서 콤보와 클리어 시간으로 기록을 갱신하는 짧은 아케이드 루프입니다.
 
 ## 실행 방법
 
@@ -75,6 +76,7 @@ KINEMATION은 1인칭 팔/총 애니메이션 클립과 Animator Override만 사
 - **WaveData.cs** — 웨이브별 적 구성, 스폰 간격, 보스 여부, 체력/데미지/이속 배율
 - **EnemyPoolManager.cs** — 웨이브 1~5 유한 스폰, 풀링, 웨이브 배너, 보스 HP UI. 마지막 웨이브 클리어 시 Mission Clear
 - **WaveRewardUI.cs** — 웨이브 클리어 후 강화 3개 중 선택. 카드에 실제 수치 표시
+- **EnemyData.cs** — 적 스탯. 일반 좀비는 같은 텍스처에 색만 다른 변주. 러너는 Run 애니 + 녹색 틴트, 이속 8 / 체력 35
 - **EnemyAI.cs** — 이동, 공격, 사망, 드랍. `EnemyData`와 웨이브 배율 적용. 보스는 HP 50% 이하에서 이동/공격 속도 상승
 - **EnemyCounterManager.cs** — 생존 적 수 UI
 
@@ -85,8 +87,8 @@ KINEMATION은 1인칭 팔/총 애니메이션 클립과 Animator Override만 사
 
 ### 5. UI / 로비
 - **HealthBar.cs** — 체력바
-- **LobbyManager.cs** — 로비, 최고 점수
-- **MenuManager.cs** — 일시정지, 로비 이동, 게임 종료. Reward 화면이 열려 있으면 Pause가 열리지 않음
-- **ScoreManager.cs** — JSON 최고 점수 저장/로드. Retry는 Main 씬을 다시 로드해 점수/웨이브/풀을 초기화한다
+- **LobbyManager.cs** — 로비, 최고 점수 / 최고 콤보 / 최단 클리어
+- **MenuManager.cs** — 일시정지, 로비 이동, 게임 종료. Result에 점수·콤보·클리어/생존 시간 표시. Reward 화면이 열려 있으면 Pause가 열리지 않음
+- **ScoreManager.cs** — 킬 콤보(2.5초, 최대 x5)와 클리어 시간. JSON에 최고 점수·최고 콤보·최단 클리어 저장. Retry는 Main 씬을 다시 로드해 점수/웨이브/풀을 초기화한다
 - **PickupMessageManager.cs** — 아이템 획득 메시지
 - **ButtonScaleEffect.cs** — 버튼 오버 스케일

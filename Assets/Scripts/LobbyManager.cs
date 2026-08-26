@@ -1,99 +1,81 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine.SceneManagement; // ¾À ÀüÈ¯À» À§ÇÑ ³×ÀÓ½ºÆäÀÌ½º
+ï»¿using System.Collections;
+using UnityEngine.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro; // TextMeshPro »ç¿ë
+using TMPro;
 using DG.Tweening;
 
 public class LobbyManager : MonoBehaviour
 {
-    public TMP_Text highScoreText; // ÃÖ°íÁ¡ Ç¥½Ã Text
-    public Image fadeImage;        // ÆäÀÌµå È¿°ú¿ë UI ÀÌ¹ÌÁö
-    public GameObject loadingPanel; // ·Îµù ÆÐ³Î
-    public Image loadingImage;    // ·Îµù ÀÌ¹ÌÁö
-    public Button startButton;   // Play ¹öÆ°
-    private string savePath;       // ÀúÀå °æ·Î
+    public TMP_Text highScoreText;
+    public Image fadeImage;
+    public GameObject loadingPanel;
+    public Image loadingImage;
+    public Button startButton;
+    public string highScoreFormat = "ìµœê³  ì ìˆ˜ : {0}";
+    public string bestComboFormat = "ìµœê³  ì½¤ë³´ : x{0}";
+    public string bestClearFormat = "ìµœë‹¨ í´ë¦¬ì–´ : {0}";
+    public string mainSceneName = "Main";
 
     void Start()
     {
-        // ÀúÀå °æ·Î ¼³Á¤
-        savePath = System.IO.Path.Combine(Application.persistentDataPath, "scoreData.json");
-
-        // ÃÖ°íÁ¡ ºÒ·¯¿À±â ¹× Ç¥½Ã
-        int highScore = LoadHighScore();
-        highScoreText.text = $"ÃÖ°í Á¡¼ö : {highScore}";
+        if (highScoreText != null)
+            highScoreText.text = FormatRecords(ScoreSave.Load());
 
         startButton.onClick.AddListener(StartGame);
-        // ½ÃÀÛ ½Ã ÆäÀÌµå ÀÎ
         FadeIn();
     }
 
     public void StartGame()
     {
-        // ÆäÀÌµå ¾Æ¿ô ÈÄ ¾À ÀüÈ¯
         FadeOut(() =>
         {
-            StartCoroutine(LoadSceneAsync("Main")); // ¸ÞÀÎ ¾ÀÀ¸·Î ÀÌµ¿
+            StartCoroutine(LoadSceneAsync(mainSceneName));
         });
     }
 
-    int LoadHighScore()
+    string FormatRecords(ScoreData data)
     {
-        if (System.IO.File.Exists(savePath))
-        {
-            string json = System.IO.File.ReadAllText(savePath);
-            ScoreData data = JsonUtility.FromJson<ScoreData>(json);
-            return data.highScore;
-        }
+        if (data == null)
+            data = new ScoreData();
 
-        // ÀúÀåµÈ Á¡¼ö°¡ ¾øÀ¸¸é 0 ¹ÝÈ¯
-        return 0;
+        return string.Format(highScoreFormat, data.highScore)
+            + "\n" + string.Format(bestComboFormat, data.bestCombo)
+            + "\n" + string.Format(bestClearFormat, ScoreSave.FormatClearRecord(data.bestClearTime));
     }
+
     void FadeIn()
     {
-        // ½ÃÀÛ ½Ã ÆäÀÌµå ÀÎ È¿°ú
         fadeImage.gameObject.SetActive(true);
-        fadeImage.color = new Color(0, 0, 0, 1); // °ËÀº»ö ¿ÏÀü ºÒÅõ¸í
+        fadeImage.color = new Color(0, 0, 0, 1);
         fadeImage.DOFade(0, 1f).OnComplete(() =>
         {
-            fadeImage.gameObject.SetActive(false); // ÆäÀÌµå ¿Ï·á ÈÄ ºñÈ°¼ºÈ­
+            fadeImage.gameObject.SetActive(false);
         });
     }
 
     void FadeOut(System.Action onComplete)
     {
-        // ¾À ÀüÈ¯ Àü ÆäÀÌµå ¾Æ¿ô È¿°ú
         fadeImage.gameObject.SetActive(true);
-        fadeImage.color = new Color(0, 0, 0, 0); // °ËÀº»ö ¿ÏÀü Åõ¸í
+        fadeImage.color = new Color(0, 0, 0, 0);
         fadeImage.DOFade(1, 1f).OnComplete(() => onComplete.Invoke());
     }
 
     IEnumerator LoadSceneAsync(string sceneName)
     {
-        // ·Îµù ÆÐ³Î È°¼ºÈ­
         loadingPanel.SetActive(true);
 
-        // ·Îµù ¾ÆÀÌÄÜ È¸Àü ½ÃÀÛ
         loadingImage.transform.DORotate(new Vector3(0, 0, -360), 1f, RotateMode.FastBeyond360)
-            .SetLoops(-1, LoopType.Restart) // ¹«ÇÑ È¸Àü
+            .SetLoops(-1, LoopType.Restart)
             .SetEase(Ease.Linear);
 
-        // ºñµ¿±â ¾À ·Îµå
         AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName);
         operation.allowSceneActivation = false;
 
         while (!operation.isDone)
         {
-            // ·Îµù »óÅÂ Ç¥½Ã (ÇÊ¿ä ½Ã Ãß°¡)
-            float progress = Mathf.Clamp01(operation.progress / 0.9f);
-            Debug.Log($"·Îµù Áß: {progress * 100}%");
-
             if (operation.progress >= 0.9f)
-            {
-                // ·Îµù ¿Ï·á ÈÄ ¾À ÀüÈ¯
                 operation.allowSceneActivation = true;
-            }
 
             yield return null;
         }

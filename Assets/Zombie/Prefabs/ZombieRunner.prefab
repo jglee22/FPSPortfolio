@@ -873,7 +873,7 @@ GameObject:
   - component: {fileID: -378899208513864728}
   - component: {fileID: -7287699666414723890}
   m_Layer: 0
-  m_Name: Zombie3
+  m_Name: ZombieRunner
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -888,7 +888,7 @@ Transform:
   m_GameObject: {fileID: 4803014352389650695}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -0.09, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.92, y: 0.92, z: 0.92}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6201095571783922607}
@@ -906,7 +906,7 @@ Animator:
   m_GameObject: {fileID: 4803014352389650695}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: 8f7380da49034cd488ddff94b1ac35d1, type: 3}
-  m_Controller: {fileID: 9100000, guid: b64d5213bb7bbf544a1b1a26322919fe, type: 2}
+  m_Controller: {fileID: 9100000, guid: e4b8c17a62d049f3b81c5e7a90d34f12, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -931,8 +931,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 0}
   attackRange: 1.5
-  moveSpeed: 3.5
-  health: 50
+  moveSpeed: 8
+  health: 35
   leftAttackPoint: {fileID: 6378098023324308528}
   rightAttackPoint: {fileID: 4945193143705074182}
   attackRadius: 0.1
@@ -962,8 +962,8 @@ NavMeshAgent:
   m_Enabled: 1
   m_AgentTypeID: 0
   m_Radius: 0.5
-  m_Speed: 3.5
-  m_Acceleration: 8
+  m_Speed: 8
+  m_Acceleration: 20
   avoidancePriority: 50
   m_AngularSpeed: 120
   m_StoppingDistance: 1
@@ -1040,7 +1040,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: d3e0a6f49b1f5278c5a30d72f9b46d15, type: 2}
+  - {fileID: 2100000, guid: a1c8e4f27b9d4056a3e18c50d7f24b90, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

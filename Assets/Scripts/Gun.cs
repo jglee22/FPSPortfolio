@@ -135,6 +135,8 @@ public class Gun : MonoBehaviour
             return;
         }
 
+        UpdateCrosshair();
+
         if (isReloading)
             return;
 
@@ -188,8 +190,6 @@ public class Gun : MonoBehaviour
 
         if (Input.GetMouseButtonUp(0))
             SetRecoilFiring(false);
-
-        UpdateCrosshair();
     }
 
     public void UpdateUI()

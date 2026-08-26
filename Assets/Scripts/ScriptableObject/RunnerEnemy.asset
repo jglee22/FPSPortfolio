@@ -10,11 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4d7ecc94f3bae984d831243bf2a7e7f3, type: 3}
-  m_Name: NormalEnemy_3
+  m_Name: RunnerEnemy
   m_EditorClassIdentifier: 
-  enemyName: NormalEnemy_3
-  prefab: {fileID: 4803014352389650695, guid: 06cb2b131fe009c47a523671a8fa9ed8, type: 3}
-  maxHealth: 50
+  enemyName: Runner
+  prefab: {fileID: 4803014352389650695, guid: f5c9d28b73e15a04c92d6f8b01e45a23, type: 3}
+  maxHealth: 35
   attackDamage: 10
-  moveSpeed: 3.5
+  moveSpeed: 8
+  animatorSpeed: 1.4
   isBoss: 0
+  enrageHealthRatio: 0.5
+  enrageMoveSpeedMultiplier: 1.5
+  enrageAnimatorSpeed: 1.35

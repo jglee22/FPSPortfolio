@@ -28927,6 +28927,7 @@ MonoBehaviour:
   hitMarkerColor: {r: 1, g: 1, b: 1, a: 1}
   killMarkerColor: {r: 1, g: 0.82, b: 0.22, a: 1}
   hitMarkerDuration: 0.09
+  hudCanvas: {fileID: 1474743570}
 --- !u!114 &1932853652
 MonoBehaviour:
   m_ObjectHideFlags: 0

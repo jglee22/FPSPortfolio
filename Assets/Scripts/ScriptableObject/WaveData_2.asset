@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemies:
   - enemyData: {fileID: 11400000, guid: 06f58824a8596ef4f8c9cb76bfc69856, type: 2}
-    count: 7
-  spawnInterval: 1
+    count: 12
+  spawnInterval: 0.85
   waveDelay: 5
   isBossWave: 0
   healthMultiplier: 1

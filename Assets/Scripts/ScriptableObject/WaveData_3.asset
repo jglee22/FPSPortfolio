@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemies:
   - enemyData: {fileID: 11400000, guid: 06f58824a8596ef4f8c9cb76bfc69856, type: 2}
-    count: 3
+    count: 5
   - enemyData: {fileID: 11400000, guid: e0862ac2f95b4784a9db39a0720eefd7, type: 2}
-    count: 3
+    count: 4
   - enemyData: {fileID: 11400000, guid: dbae57ff700ca7d4ea9f7bba556579f8, type: 2}
-    count: 2
-  spawnInterval: 0.9
+    count: 3
+  spawnInterval: 0.75
   waveDelay: 5
   isBossWave: 0
   healthMultiplier: 1

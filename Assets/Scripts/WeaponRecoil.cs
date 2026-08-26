@@ -19,6 +19,7 @@ public class WeaponRecoil : MonoBehaviour
     private Quaternion appliedRotation = Quaternion.identity;
     private Transform recoilTarget;
     private PlayerHealth playerHealth;
+    private PlayerMovement playerMovement;
     private bool recoilPaused;
     private bool hasRestPose;
     private bool hasRecoilRest;
@@ -32,6 +33,8 @@ public class WeaponRecoil : MonoBehaviour
     void Awake()
     {
         playerHealth = FindObjectOfType<PlayerHealth>();
+        if (playerHealth != null)
+            playerMovement = playerHealth.GetComponent<PlayerMovement>();
         if (weaponTransform == null)
             weaponTransform = transform;
         ResolveRecoilTarget();
@@ -78,9 +81,8 @@ public class WeaponRecoil : MonoBehaviour
 
     void UpdateBob()
     {
-        PlayerMovement movement = playerHealth != null ? playerHealth.GetComponent<PlayerMovement>() : null;
-        bool sprinting = movement != null && movement.IsSprinting;
-        float moveSpeed = movement != null ? movement.PlanarSpeed : 0f;
+        bool sprinting = playerMovement != null && playerMovement.IsSprinting;
+        float moveSpeed = playerMovement != null ? playerMovement.PlanarSpeed : 0f;
         bool bobbing = !recoilPaused && moveSpeed > 0.4f && !MenuManager.IsInputBlocked && !WaveRewardUI.IsOpen;
 
         Vector3 targetBob = Vector3.zero;

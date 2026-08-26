@@ -13,7 +13,7 @@ public class LobbyManager : MonoBehaviour
     public Image loadingImage;
     public Button startButton;
     public string highScoreFormat = "최고 점수 : {0}";
-    public string bestComboFormat = "최고 콤보 : x{0}";
+    public string bestComboFormat = "최고 콤보 : {0}";
     public string bestClearFormat = "최단 클리어 : {0}";
     public string mainSceneName = "Main";
 

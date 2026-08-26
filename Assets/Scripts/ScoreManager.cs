@@ -67,13 +67,14 @@ public class ScoreManager : MonoBehaviour
     public TextMeshProUGUI comboText;
     public TextMeshProUGUI runTimeText;
     public float comboWindow = 2.5f;
-    public int maxCombo = 5;
+    public int maxMultiplier = 5;
     public Color comboColor = new Color(1f, 0.82f, 0.22f, 1f);
     public Vector2 comboTextOffset = new Vector2(0f, -44f);
     public Vector2 runTimeTextOffset = new Vector2(0f, -88f);
     public string scoreFormat = "점수 : {0}";
     public string highScoreFormat = "최고 점수 : {0}";
-    public string comboFormat = "COMBO x{0}";
+    public string comboFormat = "{0} COMBO";
+    public string comboCappedFormat = "{0} COMBO  x{1}";
     public string runTimeFormat = "{0}";
 
     private string savePath;
@@ -136,7 +137,7 @@ public class ScoreManager : MonoBehaviour
         if (Time.time - lastKillTime > comboWindow)
             combo = 0;
 
-        combo = Mathf.Min(combo + 1, maxCombo);
+        combo++;
         lastKillTime = Time.time;
 
         if (combo > bestComboThisRun)
@@ -144,7 +145,8 @@ public class ScoreManager : MonoBehaviour
         if (bestComboThisRun > bestCombo)
             bestCombo = bestComboThisRun;
 
-        AddScore(baseScore * combo);
+        int multiplier = Mathf.Min(combo, maxMultiplier);
+        AddScore(baseScore * multiplier);
     }
 
     public void AddScore(int amount)
@@ -183,7 +185,12 @@ public class ScoreManager : MonoBehaviour
             bool showCombo = combo >= 2;
             comboText.gameObject.SetActive(showCombo);
             if (showCombo)
-                comboText.text = string.Format(comboFormat, combo);
+            {
+                if (combo > maxMultiplier)
+                    comboText.text = string.Format(comboCappedFormat, combo, maxMultiplier);
+                else
+                    comboText.text = string.Format(comboFormat, combo);
+            }
         }
 
         if (runTimeText != null)

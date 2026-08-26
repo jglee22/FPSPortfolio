@@ -23,9 +23,9 @@ public class MenuManager : MonoBehaviour
     public string newBestLabel = "신기록";
     public string currentScoreFormat = "현재 점수 : {0}";
     public string highScoreFormat = "최고 점수 : {0}";
-    public string comboRecordFormat = "최고 콤보 : x{0}  /  기록 x{1}";
-    public string clearTimeFormat = "클리어 : {0}  /  최단 {1}";
-    public string surviveTimeFormat = "생존 : {0}  /  최단 {1}";
+    public string comboRecordFormat = "최고 콤보 : {0}  /  기록 {1}";
+    public string clearTimeFormat = "클리어 : {0}  /  최단 클리어 : {1}";
+    public string surviveTimeFormat = "생존 시간 : {0}";
 
     bool isPaused;
     bool isGameOver;
@@ -234,9 +234,10 @@ public class MenuManager : MonoBehaviour
         if (gameOverTimeText != null)
         {
             string timeText = ScoreSave.FormatTime(runTime);
-            string bestClearText = ScoreSave.FormatClearRecord(bestClearTime);
-            string timeFormat = missionCleared ? clearTimeFormat : surviveTimeFormat;
-            gameOverTimeText.text = string.Format(timeFormat, timeText, bestClearText);
+            if (missionCleared)
+                gameOverTimeText.text = string.Format(clearTimeFormat, timeText, ScoreSave.FormatClearRecord(bestClearTime));
+            else
+                gameOverTimeText.text = string.Format(surviveTimeFormat, timeText);
         }
         if (newBestText != null)
             newBestText.gameObject.SetActive(isNewBest);
@@ -259,7 +260,7 @@ public class MenuManager : MonoBehaviour
         gameOverScoreText = CreateLabel("Score", gameOverPanel.transform, string.Format(currentScoreFormat, 0), 42f, new Vector2(0f, 110f), new Vector2(800f, 60f));
         gameOverHighScoreText = CreateLabel("HighScore", gameOverPanel.transform, string.Format(highScoreFormat, 0), 32f, new Vector2(0f, 58f), new Vector2(800f, 44f));
         gameOverComboText = CreateLabel("Combo", gameOverPanel.transform, string.Format(comboRecordFormat, 0, 0), 32f, new Vector2(0f, 14f), new Vector2(800f, 44f));
-        gameOverTimeText = CreateLabel("Time", gameOverPanel.transform, string.Format(surviveTimeFormat, "-", "-"), 32f, new Vector2(0f, -30f), new Vector2(800f, 44f));
+        gameOverTimeText = CreateLabel("Time", gameOverPanel.transform, string.Format(surviveTimeFormat, "-"), 32f, new Vector2(0f, -30f), new Vector2(800f, 44f));
         newBestText = CreateLabel("NewBest", gameOverPanel.transform, newBestLabel, 32f, new Vector2(0f, -78f), new Vector2(400f, 40f));
         newBestText.color = new Color(1f, 0.78f, 0.25f, 1f);
         newBestText.gameObject.SetActive(false);

@@ -89,6 +89,6 @@ KINEMATION은 1인칭 팔/총 애니메이션 클립과 Animator Override만 사
 - **HealthBar.cs** — 체력바
 - **LobbyManager.cs** — 로비, 최고 점수 / 최고 콤보 / 최단 클리어
 - **MenuManager.cs** — 일시정지, 로비 이동, 게임 종료. Result에 점수·콤보·클리어/생존 시간 표시. Reward 화면이 열려 있으면 Pause가 열리지 않음
-- **ScoreManager.cs** — 킬 콤보(2.5초, 최대 x5)와 클리어 시간. JSON에 최고 점수·최고 콤보·최단 클리어 저장. Retry는 Main 씬을 다시 로드해 점수/웨이브/풀을 초기화한다
+- **ScoreManager.cs** — 킬 콤보(2.5초). 연속 처치는 제한 없고 점수 배율만 최대 x5. JSON에 최고 점수·최고 콤보·최단 클리어 저장. Retry는 Main 씬을 다시 로드해 점수/웨이브/풀을 초기화한다
 - **PickupMessageManager.cs** — 아이템 획득 메시지
 - **ButtonScaleEffect.cs** — 버튼 오버 스케일

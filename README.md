@@ -12,6 +12,8 @@ Unity 2021.3.39f1 LTS + URP.
 3. `Main` 씬에서 `Camera` 아래에 `SK_Arms_Mono`를 두고, 총을 `ik_hand_gun`에 연결한다.
 4. 타이틀은 `Assets/Scenes/Lobby.unity`, 플레이는 `Assets/Scenes/Main.unity`에서 Play.
 
+저장소만 Clone하면 유료 에셋이 없어 바로 Play하기 어렵다. 리뷰는 플레이 영상·스크린샷·실행 빌드와 GitHub 소스를 함께 보면 된다.
+
 사격·재장전·탄약·반동은 에셋 플레이어 스크립트가 아니라 아래 `Gun` 계열을 사용합니다.  
 KINEMATION은 1인칭 팔/총 애니메이션 클립과 Animator Override만 사용합니다.
 
@@ -67,7 +69,7 @@ KINEMATION은 1인칭 팔/총 애니메이션 클립과 Animator Override만 사
 - **FPSViewModel.cs** — 씬에 올려 둔 팔/총 Animator로 Idle, Fire, Reload 재생. 라이플 연사는 캐릭터 Fire를 매 발 처음부터 끊지 않고, 무기 Fire(0.1s)만 재시작한다
 - **WeaponRecoil.cs** / **GunRecoil.cs** — 뷰모델 반동, 카메라 반동
 - **GunController.cs** — 1/2 무기 전환 (라이플, 샷건)
-- **WeaponUpgradeItem.cs** — 웨이브 보상용 강화 (데미지 +4, 탄창 +6, 연사/재장전 ×0.88). 탄창 증가는 샷건에 적용되지 않음
+- **WeaponUpgradeItem.cs** — 웨이브 보상용 강화 (데미지 +4, 라이플 탄창 +6, 연사/재장전 ×0.88). 샷건 장탄은 고정
 
 ### 3. 웨이브 / 적
 - **WaveData.cs** — 웨이브별 적 구성, 스폰 간격, 보스 여부, 체력/데미지/이속 배율

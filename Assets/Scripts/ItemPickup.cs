@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -19,6 +20,7 @@ public class ItemPickup : MonoBehaviour
 
     Vector3 basePosition;
     Transform labelTransform;
+    bool collected;
 
     void Start()
     {
@@ -42,6 +44,9 @@ public class ItemPickup : MonoBehaviour
 
     void Update()
     {
+        if (collected)
+            return;
+
         transform.position = basePosition + Vector3.up * (Mathf.Sin(Time.time * hoverSpeed) * hoverHeight);
         transform.Rotate(Vector3.up, spinSpeed * Time.deltaTime, Space.World);
         FaceLabelToCamera();
@@ -68,14 +73,35 @@ public class ItemPickup : MonoBehaviour
         if (consumableItem == null)
             return;
 
+        collected = true;
+        Collider pickupCollider = GetComponent<Collider>();
+        if (pickupCollider != null)
+            pickupCollider.enabled = false;
+
         consumableItem.Apply(other.gameObject);
 
         if (pickupSound != null)
-            AudioSource.PlayClipAtPoint(pickupSound, transform.position);
+            AudioSource.PlayClipAtPoint(pickupSound, transform.position, 0.4f);
 
         string message = GetPickupMessage();
         if (PickupMessageManager.Instance != null && !string.IsNullOrEmpty(message))
             PickupMessageManager.Instance.EnqueuePickupMessage(message);
+
+        StartCoroutine(CollectRoutine());
+    }
+
+    IEnumerator CollectRoutine()
+    {
+        Vector3 startScale = transform.localScale;
+        float duration = 0.16f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
+            yield return null;
+        }
 
         Destroy(gameObject);
     }
@@ -125,8 +151,8 @@ public class ItemPickup : MonoBehaviour
         text.text = labelText;
         text.fontSize = labelFontSize;
         text.alignment = TextAlignmentOptions.Center;
-        text.color = Color.white;
-        text.outlineWidth = 0.3f;
+        text.color = markerColor;
+        text.outlineWidth = 0.25f;
         text.outlineColor = Color.black;
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Overflow;

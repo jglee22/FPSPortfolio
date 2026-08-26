@@ -111,7 +111,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   consumableItem: {fileID: 11400000, guid: f1b4d70e9a5c6f23d6e8b0a2c4d5f7b9, type: 2}
-  pickupSound: {fileID: 0}
+  pickupSound: {fileID: 8300000, guid: eb5685b26a6494994af389a3293064e8, type: 3}
   hoverHeight: 0.12
   hoverSpeed: 2.4
   spinSpeed: 50

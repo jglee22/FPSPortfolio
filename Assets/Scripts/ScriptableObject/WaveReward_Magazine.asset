@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fdaa60d145ad26f46b588b35fa02f77c, type: 3}
   m_Name: WaveReward_Magazine
   m_EditorClassIdentifier: 
-  displayName: "\uD0C4\uCC3D \uC99D\uAC00"
+  displayName: "\uB77C\uC774\uD50C \uD0C4\uCC3D \uC99D\uAC00"
   weaponType: 
   increaseDamage: 0
   increaseAmmo: 1

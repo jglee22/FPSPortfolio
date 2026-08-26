@@ -22,6 +22,12 @@ public class WeaponRecoil : MonoBehaviour
     private bool recoilPaused;
     private bool hasRestPose;
     private bool hasRecoilRest;
+    private float bobTime;
+    private Vector3 bobOffset;
+    public float walkBobAmount = 0.007f;
+    public float sprintBobAmount = 0.012f;
+    public float walkBobSpeed = 9f;
+    public float sprintBobSpeed = 13f;
 
     void Awake()
     {
@@ -64,8 +70,33 @@ public class WeaponRecoil : MonoBehaviour
         appliedOffset = Vector3.Lerp(appliedOffset, targetOffset, follow);
         appliedRotation = Quaternion.Slerp(appliedRotation, targetRotation, follow);
 
-        recoilTarget.localPosition = recoilRestPosition + appliedOffset;
+        UpdateBob();
+
+        recoilTarget.localPosition = recoilRestPosition + appliedOffset + bobOffset;
         recoilTarget.localRotation = recoilRestRotation * appliedRotation;
+    }
+
+    void UpdateBob()
+    {
+        PlayerMovement movement = playerHealth != null ? playerHealth.GetComponent<PlayerMovement>() : null;
+        bool sprinting = movement != null && movement.IsSprinting;
+        float moveSpeed = movement != null ? movement.PlanarSpeed : 0f;
+        bool bobbing = !recoilPaused && moveSpeed > 0.4f && !MenuManager.IsInputBlocked && !WaveRewardUI.IsOpen;
+
+        Vector3 targetBob = Vector3.zero;
+        if (bobbing)
+        {
+            float amount = sprinting ? sprintBobAmount : walkBobAmount;
+            float speed = sprinting ? sprintBobSpeed : walkBobSpeed;
+            bobTime += Time.deltaTime * speed;
+            targetBob = new Vector3(Mathf.Cos(bobTime * 0.5f) * amount * 0.35f, Mathf.Sin(bobTime) * amount, 0f);
+        }
+        else
+        {
+            bobTime = 0f;
+        }
+
+        bobOffset = Vector3.Lerp(bobOffset, targetBob, Time.deltaTime * 10f);
     }
 
     public void BindTransform(Transform target)
@@ -158,6 +189,8 @@ public class WeaponRecoil : MonoBehaviour
         targetRotation = Quaternion.identity;
         appliedOffset = Vector3.zero;
         appliedRotation = Quaternion.identity;
+        bobOffset = Vector3.zero;
+        bobTime = 0f;
     }
 
     void ApplyRestToView()

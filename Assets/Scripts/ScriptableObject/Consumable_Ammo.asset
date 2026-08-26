@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8e1a47b6d2f4c90a3b5e7d9f1a2c4e6, type: 3}
   m_Name: Consumable_Ammo
   m_EditorClassIdentifier: 
-  displayName: "\uD0C4\uC57D \uD68D\uB4DD"
+  displayName: "\uD0C4\uC57D +15"
   type: 0
   amount: 15

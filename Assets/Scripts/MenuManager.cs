@@ -25,11 +25,33 @@ public class MenuManager : MonoBehaviour
     bool isPaused;
     bool isGameOver;
     bool isLeavingScene;
+    static MenuManager instance;
     GameObject gameOverPanel;
     TextMeshProUGUI resultTitleText;
     TextMeshProUGUI gameOverScoreText;
     TextMeshProUGUI gameOverHighScoreText;
     TextMeshProUGUI newBestText;
+
+    public static bool IsInputBlocked
+    {
+        get
+        {
+            if (instance == null)
+                return false;
+            return instance.isPaused || instance.isGameOver || instance.isLeavingScene;
+        }
+    }
+
+    void Awake()
+    {
+        instance = this;
+    }
+
+    void OnDestroy()
+    {
+        if (instance == this)
+            instance = null;
+    }
 
     void Start()
     {
@@ -99,6 +121,7 @@ public class MenuManager : MonoBehaviour
             return;
 
         isGameOver = true;
+        CombatHitFeedback.PlayUi(title == missionClearTitle ? 1.12f : 0.7f);
         if (resultTitleText != null)
             resultTitleText.text = title;
         StartCoroutine(ShowGameOverRoutine());
@@ -177,6 +200,7 @@ public class MenuManager : MonoBehaviour
 
         if (ScoreManager.Instance != null)
         {
+            ScoreManager.Instance.PersistHighScore();
             score = ScoreManager.Instance.score;
             highScore = ScoreManager.Instance.highScore;
             isNewBest = ScoreManager.Instance.HasNewHighScore;

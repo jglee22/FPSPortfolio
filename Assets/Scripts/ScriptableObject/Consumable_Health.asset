@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8e1a47b6d2f4c90a3b5e7d9f1a2c4e6, type: 3}
   m_Name: Consumable_Health
   m_EditorClassIdentifier: 
-  displayName: "\uCCB4\uB825 \uD68D\uB4DD"
+  displayName: "\uCCB4\uB825 +20"
   type: 1
   amount: 20

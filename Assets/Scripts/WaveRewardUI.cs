@@ -30,6 +30,7 @@ public class WaveRewardUI : MonoBehaviour
         previousTimeScale = Time.timeScale;
         IsOpen = true;
         Time.timeScale = 0f;
+        AudioListener.pause = true;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
@@ -40,6 +41,7 @@ public class WaveRewardUI : MonoBehaviour
 
         DestroyPanel();
         Time.timeScale = previousTimeScale > 0f ? previousTimeScale : 1f;
+        AudioListener.pause = false;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         IsOpen = false;
@@ -111,9 +113,9 @@ public class WaveRewardUI : MonoBehaviour
         Button button = CreateButton("Reward_" + reward.name, panelRoot.transform, position, cardSize);
         string title = string.IsNullOrEmpty(reward.displayName) ? reward.name : reward.displayName;
         string description = reward.GetDescription();
-        CreateLabel("Title", button.transform, title, 30f, new Vector2(0f, 42f), new Vector2(cardSize.x - 28f, 48f));
+        CreateLabel("Title", button.transform, title, 30f, new Vector2(0f, 42f), new Vector2(cardSize.x - 28f, 48f), Color.white);
         if (!string.IsNullOrEmpty(description))
-            CreateLabel("Value", button.transform, description, 22f, new Vector2(0f, -28f), new Vector2(cardSize.x - 28f, 72f));
+            CreateLabel("Value", button.transform, description, 22f, new Vector2(0f, -28f), new Vector2(cardSize.x - 28f, 72f), new Color(1f, 0.82f, 0.22f, 1f));
 
         WeaponUpgradeItem selectedReward = reward;
         button.onClick.AddListener(() => ChooseReward(selectedReward));
@@ -207,6 +209,11 @@ public class WaveRewardUI : MonoBehaviour
 
     TextMeshProUGUI CreateLabel(string name, Transform parent, string text, float fontSize, Vector2 position, Vector2 size)
     {
+        return CreateLabel(name, parent, text, fontSize, position, size, Color.white);
+    }
+
+    TextMeshProUGUI CreateLabel(string name, Transform parent, string text, float fontSize, Vector2 position, Vector2 size, Color color)
+    {
         GameObject labelObject = CreateUiObject(name, parent);
         RectTransform rect = labelObject.GetComponent<RectTransform>();
         rect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -221,8 +228,10 @@ public class WaveRewardUI : MonoBehaviour
         label.text = text;
         label.fontSize = fontSize;
         label.alignment = TextAlignmentOptions.Center;
-        label.color = Color.white;
+        label.color = color;
         label.raycastTarget = false;
+        label.outlineWidth = 0.25f;
+        label.outlineColor = new Color(0f, 0f, 0f, 0.9f);
         return label;
     }
 
@@ -270,6 +279,7 @@ public class WaveRewardUI : MonoBehaviour
             return;
 
         Time.timeScale = previousTimeScale > 0f ? previousTimeScale : 1f;
+        AudioListener.pause = false;
         IsOpen = false;
     }
 }

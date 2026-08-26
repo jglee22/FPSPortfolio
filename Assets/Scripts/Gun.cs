@@ -49,6 +49,7 @@ public class Gun : MonoBehaviour
     public AudioSource gunAudioSource;
     public AudioClip gunShotSound;
     public AudioClip reloadSound;
+    public AudioClip emptyClickSound;
     public Vector3 reloadMoveOffset = new Vector3(0f, -0.04f, 0.05f);
     public Vector3 reloadTiltEuler = new Vector3(8f, 0f, -6f);
     [Range(0.05f, 0.5f)] public float reloadDipRatio = 0.2f;
@@ -72,6 +73,7 @@ public class Gun : MonoBehaviour
     public Color targetColor = Color.red;
 
     public float muzzleFlashScale = 1f;
+    public Vector3 muzzleFlashLocalOffset = Vector3.zero;
     public float firePitchMin = 0.97f;
     public float firePitchMax = 1.04f;
     [Range(0f, 1f)] public float fireVolume = 1f;
@@ -80,6 +82,7 @@ public class Gun : MonoBehaviour
     private WeaponRecoil weaponRecoil;
     private FPSViewModel viewModel;
     private PlayerHealth playerHealth;
+    private PlayerMovement playerMovement;
     private Tween reloadTween;
     private Vector3 magazineRestPosition;
     private Quaternion magazineRestRotation;
@@ -106,6 +109,7 @@ public class Gun : MonoBehaviour
     {
         currentAmmo = maxAmmo;
         playerHealth = FindObjectOfType<PlayerHealth>();
+        playerMovement = FindObjectOfType<PlayerMovement>();
         gunRecoil = GetComponent<GunRecoil>();
         weaponRecoil = GetComponent<WeaponRecoil>();
         ResolveReloadParts();
@@ -123,8 +127,10 @@ public class Gun : MonoBehaviour
             return;
         }
 
-        if (WaveRewardUI.IsOpen)
+        if (WaveRewardUI.IsOpen || MenuManager.IsInputBlocked)
         {
+            if (isReloading)
+                CancelReload();
             SetRecoilFiring(false);
             return;
         }
@@ -132,10 +138,16 @@ public class Gun : MonoBehaviour
         if (isReloading)
             return;
 
+        if (viewModel != null && !Input.GetMouseButton(0))
+            viewModel.UpdateLocomotion(playerMovement != null && playerMovement.IsSprinting);
+
         UpdateUI();
 
         if (Input.GetKeyDown(KeyCode.B) && gunType == GunType.Shotgun)
             isAutoFire = !isAutoFire;
+
+        if (!IsPointerOverUI() && Input.GetMouseButtonDown(0) && currentAmmo <= 0)
+            PlayEmptyClick();
 
         if ((Input.GetKeyDown(KeyCode.R) || currentAmmo <= 0) && currentAmmo < maxAmmo && reloadRoutine == null)
         {
@@ -147,21 +159,30 @@ public class Gun : MonoBehaviour
         {
             if (!isAutoFire && Input.GetMouseButtonDown(0) && currentAmmo > 0)
             {
-                if (gunType == GunType.Shotgun && isShotgunCooldown)
-                    return;
-
-                Shoot();
-
-                if (gunType == GunType.Shotgun && shotgunCooldownRoutine == null)
-                    shotgunCooldownRoutine = StartCoroutine(ShotgunCooldown());
-
-                SetRecoilFiring(true);
+                if (CanFireShotgun())
+                {
+                    Shoot();
+                    StartShotgunCooldownIfNeeded();
+                    SetRecoilFiring(true);
+                }
             }
-            else if (isAutoFire && Input.GetMouseButton(0) && currentAmmo > 0 && Time.time >= nextTimeToFire)
+            else if (isAutoFire && Input.GetMouseButton(0) && currentAmmo > 0)
             {
-                nextTimeToFire = Time.time + fireRate;
-                Shoot();
-                SetRecoilFiring(true);
+                if (gunType == GunType.Shotgun)
+                {
+                    if (CanFireShotgun())
+                    {
+                        Shoot();
+                        StartShotgunCooldownIfNeeded();
+                        SetRecoilFiring(true);
+                    }
+                }
+                else if (Time.time >= nextTimeToFire)
+                {
+                    nextTimeToFire = Time.time + fireRate;
+                    Shoot();
+                    SetRecoilFiring(true);
+                }
             }
         }
 
@@ -200,6 +221,7 @@ public class Gun : MonoBehaviour
 
         PlayFireSound();
         PlayMuzzleFlash();
+        PlayShotgunKick();
 
         currentAmmo--;
 
@@ -278,6 +300,24 @@ public class Gun : MonoBehaviour
         gunAudioSource.pitch = previousPitch;
     }
 
+    void PlayEmptyClick()
+    {
+        if (gunAudioSource == null || emptyClickSound == null)
+            return;
+
+        gunAudioSource.PlayOneShot(emptyClickSound, 0.45f);
+    }
+
+    void PlayShotgunKick()
+    {
+        if (gunType != GunType.Shotgun || fpsCamera == null)
+            return;
+
+        CameraShake shake = fpsCamera.GetComponent<CameraShake>();
+        if (shake != null)
+            shake.Shake(0.07f, 0.11f);
+    }
+
     void EnsureMuzzleFlash()
     {
         if (muzzleFlashInstance != null || muzzleFlash == null)
@@ -290,7 +330,7 @@ public class Gun : MonoBehaviour
         else if (gunBarrel != null)
         {
             muzzleFlashInstance = Instantiate(muzzleFlash, gunBarrel);
-            muzzleFlashInstance.transform.localPosition = Vector3.zero;
+            muzzleFlashInstance.transform.localPosition = muzzleFlashLocalOffset;
             muzzleFlashInstance.transform.localRotation = Quaternion.identity;
             muzzleFlashInstance.transform.localScale = Vector3.one * muzzleFlashScale;
         }
@@ -364,6 +404,21 @@ public class Gun : MonoBehaviour
     bool ShouldUseTacticalReload()
     {
         return gunType == GunType.Shotgun && currentAmmo > 0 && currentAmmo < maxAmmo;
+    }
+
+    bool CanFireShotgun()
+    {
+        if (gunType != GunType.Shotgun)
+            return true;
+        return !isShotgunCooldown;
+    }
+
+    void StartShotgunCooldownIfNeeded()
+    {
+        if (gunType != GunType.Shotgun || shotgunCooldownRoutine != null)
+            return;
+
+        shotgunCooldownRoutine = StartCoroutine(ShotgunCooldown());
     }
 
     void PlayReloadMotion()
@@ -520,12 +575,17 @@ public class Gun : MonoBehaviour
 
     public void CancelReload()
     {
+        bool wasReloading = isReloading || reloadRoutine != null;
         if (reloadRoutine != null)
         {
             StopCoroutine(reloadRoutine);
             reloadRoutine = null;
         }
         isReloading = false;
+
+        if (wasReloading)
+            StopReloadSound();
+
         if (viewModel != null)
             viewModel.PlayIdle();
 
@@ -537,6 +597,12 @@ public class Gun : MonoBehaviour
                 weaponRecoil != null ? weaponRecoil.RestLocalPosition : transform.localPosition,
                 weaponRecoil != null ? weaponRecoil.RestLocalRotation : transform.localRotation
             );
+    }
+
+    void StopReloadSound()
+    {
+        if (gunAudioSource != null)
+            gunAudioSource.Stop();
     }
 
     IEnumerator ShotgunCooldown()
@@ -577,6 +643,8 @@ public class Gun : MonoBehaviour
             return;
 
         currentAmmo = Mathf.Min(maxAmmo, currentAmmo + amount);
+        if (isReloading)
+            CancelReload();
         UpdateUI();
     }
 

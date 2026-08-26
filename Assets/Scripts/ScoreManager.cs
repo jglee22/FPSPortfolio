@@ -44,7 +44,10 @@ public class ScoreManager : MonoBehaviour
     {
         score += amount;
         if (score > highScore)
+        {
             highScore = score;
+            SaveScore();
+        }
         UpdateScoreUI();
     }
 
@@ -54,6 +57,10 @@ public class ScoreManager : MonoBehaviour
             scoreText.text = "점수 : " + score;
         if (highScoreText != null)
             highScoreText.text = "최고 점수 : " + highScore;
+    }
+
+    public void PersistHighScore()
+    {
         SaveScore();
     }
 

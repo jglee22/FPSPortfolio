@@ -1,18 +1,18 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+
 public class GrenadeThrower : MonoBehaviour
 {
-    public GameObject grenadePrefab; // ? 
-    public Transform throwPoint;     //  ?
-    public float throwForce = 20f;   //  
+    public GameObject grenadePrefab;
+    public Transform throwPoint;
+    public float throwForce = 20f;
 
     public TextMeshProUGUI grenadeCountText;
 
     public int maxGrenadeCount = 3;
-    public int currentGrenadeCount;     // ? 
-    public float throwCooldown = 1f; // ô ?
+    public int currentGrenadeCount;
+    public float throwCooldown = 1f;
     private bool isCooldown = false;
     private PlayerHealth playerHealth;
 
@@ -28,13 +28,13 @@ public class GrenadeThrower : MonoBehaviour
         if (playerHealth != null && playerHealth.isPlayerDie)
             return;
 
-        if (WaveRewardUI.IsOpen)
+        if (MenuManager.IsInputBlocked || WaveRewardUI.IsOpen)
             return;
 
         if (Input.GetKeyDown(KeyCode.G) && currentGrenadeCount > 0 && !isCooldown)
         {
-            ThrowGrenade(); // ? 
-            currentGrenadeCount--; // ?  
+            ThrowGrenade();
+            currentGrenadeCount--;
             grenadeCountText.text = " x " + currentGrenadeCount.ToString();
             StartCoroutine(ThrowCooldown());
         }
@@ -42,11 +42,8 @@ public class GrenadeThrower : MonoBehaviour
 
     void ThrowGrenade()
     {
-        // ? 
         GameObject grenade = Instantiate(grenadePrefab, throwPoint.position, throwPoint.rotation);
         Rigidbody rb = grenade.GetComponent<Rigidbody>();
-
-        //  
         rb.AddForce(throwPoint.forward * throwForce, ForceMode.VelocityChange);
     }
 

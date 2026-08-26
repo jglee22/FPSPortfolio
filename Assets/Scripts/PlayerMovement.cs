@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
@@ -53,7 +51,7 @@ public class PlayerMovement : MonoBehaviour
         if (playerHealth != null && playerHealth.isPlayerDie)
             return;
 
-        if (WaveRewardUI.IsOpen)
+        if (MenuManager.IsInputBlocked || WaveRewardUI.IsOpen)
             return;
 
         isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
@@ -91,6 +89,39 @@ public class PlayerMovement : MonoBehaviour
 
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    public bool IsSprinting
+    {
+        get
+        {
+            if (isCrouching || !isGrounded)
+                return false;
+            if (MenuManager.IsInputBlocked || WaveRewardUI.IsOpen)
+                return false;
+            if (!Input.GetKey(KeyCode.LeftShift))
+                return false;
+
+            float x = Input.GetAxisRaw("Horizontal");
+            float z = Input.GetAxisRaw("Vertical");
+            return (x * x + z * z) > 0.01f;
+        }
+    }
+
+    public float PlanarSpeed
+    {
+        get
+        {
+            if (MenuManager.IsInputBlocked || WaveRewardUI.IsOpen)
+                return 0f;
+
+            float x = Input.GetAxisRaw("Horizontal");
+            float z = Input.GetAxisRaw("Vertical");
+            if ((x * x + z * z) < 0.01f)
+                return 0f;
+
+            return GetCurrentSpeed();
+        }
     }
 
     float GetCurrentSpeed()

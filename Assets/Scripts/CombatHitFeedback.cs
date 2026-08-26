@@ -1,4 +1,6 @@
+using System.Collections;
 using UnityEngine;
+using TMPro;
 
 public class CombatHitFeedback : MonoBehaviour
 {
@@ -13,14 +15,23 @@ public class CombatHitFeedback : MonoBehaviour
     public float bloodSpawnOffset = 0.1f;
     public AudioClip hitSound;
     public AudioClip deathSound;
-    [Range(0f, 1f)] public float hitSoundVolume = 0.2f;
-    [Range(0f, 1f)] public float deathSoundVolume = 0.28f;
-    public Color hitFlashColor = new Color(0.55f, 0.08f, 0.08f, 1f);
-    public float hitFlashDuration = 0.08f;
-    public float hitStunDuration = 0.08f;
+    public AudioClip killSound;
+    public AudioClip uiSound;
+    [Range(0f, 1f)] public float hitSoundVolume = 0.22f;
+    [Range(0f, 1f)] public float deathSoundVolume = 0.4f;
+    [Range(0f, 1f)] public float killSoundVolume = 0.28f;
+    [Range(0f, 1f)] public float uiSoundVolume = 0.32f;
+    public Color hitFlashColor = new Color(0.72f, 0.1f, 0.08f, 1f);
+    public float hitFlashDuration = 0.12f;
+    public float hitStunDuration = 0.11f;
+    public Color hitMarkerColor = Color.white;
+    public Color killMarkerColor = new Color(1f, 0.82f, 0.22f, 1f);
+    public float hitMarkerDuration = 0.09f;
 
     AudioSource feedbackAudio;
     ParticleSystem bloodEmitter;
+    TextMeshProUGUI hitMarker;
+    Coroutine hitMarkerRoutine;
 
     void Awake()
     {
@@ -31,6 +42,11 @@ public class CombatHitFeedback : MonoBehaviour
         feedbackAudio.playOnAwake = false;
         feedbackAudio.spatialBlend = 0f;
         CreateBloodEmitter();
+    }
+
+    void Start()
+    {
+        CreateHitMarker();
     }
 
     void OnDestroy()
@@ -55,7 +71,19 @@ public class CombatHitFeedback : MonoBehaviour
         if (Instance == null)
             return;
 
-        Instance.PlayClip(Instance.hitSound, Instance.hitSoundVolume);
+        Instance.ShowHitMarker(killed);
+        if (killed && Instance.killSound != null)
+            Instance.PlayClip(Instance.killSound, Instance.killSoundVolume, 1.06f);
+        else
+            Instance.PlayClip(Instance.hitSound, Instance.hitSoundVolume, 1f);
+    }
+
+    public static void PlayUi(float pitch)
+    {
+        if (Instance == null)
+            return;
+
+        Instance.PlayClip(Instance.uiSound, Instance.uiSoundVolume, pitch);
     }
 
     public static void PlayDeathSound(Vector3 position)
@@ -175,12 +203,82 @@ public class CombatHitFeedback : MonoBehaviour
         return material;
     }
 
-    void PlayClip(AudioClip clip, float volume)
+    void PlayClip(AudioClip clip, float volume, float pitch = 1f)
     {
         if (clip == null || feedbackAudio == null)
             return;
 
-        feedbackAudio.pitch = Random.Range(0.92f, 1.08f);
+        float previous = feedbackAudio.pitch;
+        feedbackAudio.pitch = pitch * Random.Range(0.97f, 1.03f);
         feedbackAudio.PlayOneShot(clip, volume);
+        feedbackAudio.pitch = previous;
+    }
+
+    void CreateHitMarker()
+    {
+        Canvas canvas = FindHudCanvas();
+        if (canvas == null)
+            return;
+
+        GameObject markerObject = new GameObject("HitMarker", typeof(RectTransform));
+        markerObject.transform.SetParent(canvas.transform, false);
+        RectTransform rect = markerObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(64f, 64f);
+
+        hitMarker = markerObject.AddComponent<TextMeshProUGUI>();
+        TextMeshProUGUI template = canvas.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (template != null && template.font != null)
+            hitMarker.font = template.font;
+        hitMarker.text = "+";
+        hitMarker.fontSize = 42f;
+        hitMarker.alignment = TextAlignmentOptions.Center;
+        hitMarker.color = Color.clear;
+        hitMarker.raycastTarget = false;
+        hitMarker.fontStyle = FontStyles.Bold;
+    }
+
+    Canvas FindHudCanvas()
+    {
+        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            if (canvases[i] != null && canvases[i].isActiveAndEnabled && canvases[i].renderMode != RenderMode.WorldSpace)
+                return canvases[i];
+        }
+
+        return null;
+    }
+
+    void ShowHitMarker(bool killed)
+    {
+        if (hitMarker == null)
+            return;
+
+        if (hitMarkerRoutine != null)
+            StopCoroutine(hitMarkerRoutine);
+
+        hitMarkerRoutine = StartCoroutine(HitMarkerRoutine(killed));
+    }
+
+    IEnumerator HitMarkerRoutine(bool killed)
+    {
+        hitMarker.text = killed ? "×" : "+";
+        hitMarker.color = killed ? killMarkerColor : hitMarkerColor;
+        hitMarker.rectTransform.localScale = Vector3.one * 1.15f;
+        float elapsed = 0f;
+        while (elapsed < hitMarkerDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = elapsed / hitMarkerDuration;
+            hitMarker.rectTransform.localScale = Vector3.Lerp(Vector3.one * 1.15f, Vector3.one, t);
+            yield return null;
+        }
+
+        hitMarker.color = Color.clear;
+        hitMarkerRoutine = null;
     }
 }

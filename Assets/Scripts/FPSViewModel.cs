@@ -9,11 +9,14 @@ public class FPSViewModel : MonoBehaviour
     public string fireState = "Fire";
     public string reloadState = "Reload_Empty";
     public string reloadTacState = "Reload_Tac";
+    public string sprintState = "Sprint";
 
     Animator characterAnimator;
     Animator weaponAnimator;
     float characterAnimatorSpeed = 1f;
     float weaponAnimatorSpeed = 1f;
+    bool locomotionLocked;
+    bool lastSprint;
 
     public bool IsReady => characterAnimator != null;
 
@@ -55,6 +58,7 @@ public class FPSViewModel : MonoBehaviour
     public float PlayReload(bool tactical, float emptyReloadTime)
     {
         string stateName = tactical ? ResolveTacState() : reloadState;
+        locomotionLocked = true;
         BindReloadRelay();
         PlayState(characterAnimator, stateName, true);
         PlayState(weaponAnimator, stateName, true);
@@ -69,9 +73,32 @@ public class FPSViewModel : MonoBehaviour
 
     public void PlayIdle()
     {
+        locomotionLocked = false;
+        lastSprint = false;
         RestoreAnimatorSpeed();
         PlayState(characterAnimator, idleState, true);
         PlayState(weaponAnimator, idleState, true);
+    }
+
+    public void UpdateLocomotion(bool sprinting)
+    {
+        if (locomotionLocked || characterAnimator == null)
+            return;
+
+        if (sprinting == lastSprint)
+            return;
+
+        lastSprint = sprinting;
+        if (sprinting && HasState(characterAnimator, sprintState))
+        {
+            PlayState(characterAnimator, sprintState, false);
+            PlayState(weaponAnimator, sprintState, false);
+        }
+        else
+        {
+            PlayState(characterAnimator, idleState, false);
+            PlayState(weaponAnimator, idleState, false);
+        }
     }
 
     Animator SetupAnimator(GameObject root, RuntimeAnimatorController controller, Avatar avatar)
@@ -126,6 +153,14 @@ public class FPSViewModel : MonoBehaviour
         }
 
         animator.Play(stateName, -1, 0f);
+    }
+
+    static bool HasState(Animator animator, string stateName)
+    {
+        if (animator == null || string.IsNullOrEmpty(stateName))
+            return false;
+
+        return animator.HasState(0, Animator.StringToHash(stateName));
     }
 
     void ApplyReloadSpeed(string stateName, float duration)

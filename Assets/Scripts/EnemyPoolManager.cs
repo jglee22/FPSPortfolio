@@ -14,15 +14,20 @@ public class EnemyPoolManager : MonoBehaviour
 
     public int waveNumber = 1;
     public TextMeshProUGUI waveText;
-    public float waveDelay = 5f;
-    public float waveClearBannerDuration = 1.8f;
-    public float waveStartBannerDuration = 1.8f;
+    public float waveDelay = 1.2f;
+    public float waveClearBannerDuration = 1.4f;
+    public float waveStartBannerDuration = 1.2f;
+    public float waveClearPause = 0.4f;
+    public float nextWaveReadyDelay = 1f;
+    public float bossWarningDuration = 1.2f;
     public float waveBannerFontSize = 88f;
     public float waveBannerPunchScale = 1.12f;
     public string waveClearFormat = "WAVE {0} CLEAR";
     public string waveStartFormat = "WAVE {0}";
     public string bossWarningText = "WARNING";
     public string bossWaveStartText = "BOSS WAVE";
+    public string bossEnragedText = "ENRAGED";
+    public float bossEnragedBannerDuration = 1f;
     public string missionClearText = "MISSION CLEAR";
     public Color waveBannerColor = Color.white;
     public Color bossBannerColor = new Color(1f, 0.28f, 0.22f, 1f);
@@ -103,9 +108,17 @@ public class EnemyPoolManager : MonoBehaviour
         int clearedWave = waveNumber;
         bool isLastWave = waveIndex >= waves.Length - 1;
 
+        yield return WaitUnlessDead(waveClearPause);
+        if (IsPlayerDead())
+        {
+            nextWaveRoutine = null;
+            yield break;
+        }
+
         if (isLastWave)
         {
             ShowBanner(missionClearText, waveBannerColor, waveClearBannerDuration);
+            CombatHitFeedback.PlayUi(1.15f);
             yield return new WaitForSeconds(waveClearBannerDuration);
 
             MenuManager menuManager = FindObjectOfType<MenuManager>();
@@ -119,9 +132,9 @@ public class EnemyPoolManager : MonoBehaviour
 
         WaveData nextWave = waves[waveIndex + 1];
         bool nextIsBoss = nextWave != null && nextWave.isBossWave;
-        float delay = GetWaveDelay(nextWave);
 
         ShowBanner(string.Format(waveClearFormat, clearedWave), waveBannerColor, waveClearBannerDuration);
+        CombatHitFeedback.PlayUi(1.08f);
         yield return WaitUnlessDead(waveClearBannerDuration);
         if (IsPlayerDead())
         {
@@ -136,20 +149,24 @@ public class EnemyPoolManager : MonoBehaviour
             yield break;
         }
 
-        if (nextIsBoss)
-        {
-            ShowBanner(bossWarningText, bossBannerColor, delay);
-            yield return WaitUnlessDead(delay);
-        }
-        else
-        {
-            yield return WaitUnlessDead(delay);
-        }
-
+        yield return WaitUnlessDead(nextWaveReadyDelay);
         if (IsPlayerDead())
         {
             nextWaveRoutine = null;
             yield break;
+        }
+
+        if (nextIsBoss)
+        {
+            ShowBanner(bossWarningText, bossBannerColor, bossWarningDuration);
+            CombatHitFeedback.PlayUi(0.72f);
+            ShakeCamera(0.18f, 0.08f);
+            yield return WaitUnlessDead(bossWarningDuration);
+            if (IsPlayerDead())
+            {
+                nextWaveRoutine = null;
+                yield break;
+            }
         }
 
         waveIndex++;
@@ -367,9 +384,15 @@ public class EnemyPoolManager : MonoBehaviour
     {
         WaveData wave = GetCurrentWave();
         if (wave != null && wave.isBossWave)
+        {
             ShowBanner(bossWaveStartText, bossBannerColor, waveStartBannerDuration);
+            CombatHitFeedback.PlayUi(0.82f);
+        }
         else
+        {
             ShowBanner(string.Format(waveStartFormat, waveNumber), waveBannerColor, waveStartBannerDuration);
+            CombatHitFeedback.PlayUi(1f);
+        }
     }
 
     [ContextMenu("Spawn Test Boss")]
@@ -428,6 +451,7 @@ public class EnemyPoolManager : MonoBehaviour
 
         float hold = Mathf.Max(0.35f, duration - 0.7f);
         bannerTween = DOTween.Sequence()
+            .SetUpdate(true)
             .Append(bannerGroup.DOFade(1f, 0.18f))
             .Join(bannerText.transform.DOScale(waveBannerPunchScale, 0.22f).SetEase(Ease.OutBack))
             .Append(bannerText.transform.DOScale(1f, 0.12f).SetEase(Ease.OutQuad))
@@ -560,6 +584,7 @@ public class EnemyPoolManager : MonoBehaviour
         currentBoss = boss;
         currentBoss.OnHealthChanged += UpdateBossHealthBar;
         currentBoss.OnDeath += OnBossDied;
+        currentBoss.OnEnraged += OnBossEnraged;
 
         bossHealthRoot.SetActive(true);
         if (bossHealthNameText != null)
@@ -585,6 +610,25 @@ public class EnemyPoolManager : MonoBehaviour
             bossHealthText.text = string.Format(bossHealthFormat, current, max);
     }
 
+    void OnBossEnraged()
+    {
+        string message = string.IsNullOrEmpty(bossEnragedText) ? "ENRAGED" : bossEnragedText;
+        float duration = bossEnragedBannerDuration > 0f ? bossEnragedBannerDuration : 1f;
+        ShowBanner(message, bossBannerColor, duration);
+        CombatHitFeedback.PlayUi(0.62f);
+        ShakeCamera(0.22f, 0.12f);
+    }
+
+    void ShakeCamera(float duration, float magnitude)
+    {
+        if (Camera.main == null)
+            return;
+
+        CameraShake shake = Camera.main.GetComponent<CameraShake>();
+        if (shake != null)
+            shake.Shake(duration, magnitude);
+    }
+
     void OnBossDied()
     {
         HideBossHealth();
@@ -604,6 +648,7 @@ public class EnemyPoolManager : MonoBehaviour
         {
             currentBoss.OnHealthChanged -= UpdateBossHealthBar;
             currentBoss.OnDeath -= OnBossDied;
+            currentBoss.OnEnraged -= OnBossEnraged;
             currentBoss = null;
         }
     }

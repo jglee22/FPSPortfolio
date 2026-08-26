@@ -5376,6 +5376,7 @@ MonoBehaviour:
   gunAudioSource: {fileID: 381417990}
   gunShotSound: {fileID: 8300000, guid: 8602b7d5cd15c1943a50aa53f171c8cf, type: 3}
   reloadSound: {fileID: 8300000, guid: 3c5c1d4d7b9307c458890a4beb12e4ae, type: 3}
+  emptyClickSound: {fileID: 8300000, guid: e0c70bed5c1a4443083a81de5648c7d5, type: 3}
   reloadMoveOffset: {x: 0, y: -0.04, z: 0.05}
   reloadTiltEuler: {x: 8, y: 0, z: -6}
   reloadDipRatio: 0.2
@@ -5396,10 +5397,11 @@ MonoBehaviour:
   crosshairImage: {fileID: 1223498871}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   targetColor: {r: 1, g: 0, b: 0, a: 1}
-  muzzleFlashScale: 0.75
+  muzzleFlashScale: 0.9
+  muzzleFlashLocalOffset: {x: 0, y: 0, z: 0}
   firePitchMin: 0.98
-  firePitchMax: 1.06
-  fireVolume: 1
+  firePitchMax: 1.05
+  fireVolume: 0.55
   recoilSpread: 10
 --- !u!114 &381417987
 MonoBehaviour:
@@ -5414,13 +5416,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraTransform: {fileID: 1791591022}
-  recoilAmount: 1.1
-  recoilSpeed: 8
-  recoilRiseTime: 0.04
-  maxRecoilX: 8
-  maxRecoilY: 3
-  recoilYawScale: 0.28
-  firingRecoveryScale: 0.35
+  recoilAmount: 1.35
+  recoilSpeed: 7.5
+  recoilRiseTime: 0.035
+  maxRecoilX: 9
+  maxRecoilY: 3.2
+  recoilYawScale: 0.32
+  firingRecoveryScale: 0.32
 --- !u!114 &381417988
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5434,11 +5436,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   weaponTransform: {fileID: 381417984}
-  recoilAmount: 0.06
+  recoilAmount: 0.08
   recoilSpeed: 12
   recoilFollowSpeed: 18
-  maxRecoil: 0.16
-  recoilKickEuler: {x: -3.5, y: 0.8, z: 1.5}
+  maxRecoil: 0.18
+  recoilKickEuler: {x: -4.2, y: 0.9, z: 1.8}
+  walkBobAmount: 0.007
+  sprintBobAmount: 0.012
+  walkBobSpeed: 9
+  sprintBobSpeed: 13
 --- !u!114 &381417989
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5458,6 +5464,7 @@ MonoBehaviour:
   fireState: Fire
   reloadState: Reload_Empty
   reloadTacState: Reload_Tac
+  sprintState: Sprint
 --- !u!82 &381417990
 AudioSource:
   m_ObjectHideFlags: 0
@@ -15221,6 +15228,7 @@ MonoBehaviour:
   gunAudioSource: {fileID: 984622901}
   gunShotSound: {fileID: 8300000, guid: b2d159f7e00d44d9bbc2d50a0c4fef59, type: 3}
   reloadSound: {fileID: 8300000, guid: e5198250a6a57408bb36e14bc4a322c4, type: 3}
+  emptyClickSound: {fileID: 8300000, guid: e0c70bed5c1a4443083a81de5648c7d5, type: 3}
   reloadMoveOffset: {x: -0.04, y: -0.03, z: 0.04}
   reloadTiltEuler: {x: 6, y: -4, z: 14}
   reloadDipRatio: 0.2
@@ -15241,10 +15249,11 @@ MonoBehaviour:
   crosshairImage: {fileID: 1223498871}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   targetColor: {r: 1, g: 0, b: 0, a: 1}
-  muzzleFlashScale: 1.2
-  firePitchMin: 0.8
-  firePitchMax: 0.9
-  fireVolume: 1
+  muzzleFlashScale: 1.45
+  muzzleFlashLocalOffset: {x: 0, y: 0, z: 0.02}
+  firePitchMin: 0.68
+  firePitchMax: 0.78
+  fireVolume: 0.9
   recoilSpread: 20
 --- !u!114 &984622898
 MonoBehaviour:
@@ -15259,12 +15268,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraTransform: {fileID: 1791591022}
-  recoilAmount: 7.5
-  recoilSpeed: 1.8
-  recoilRiseTime: 0.08
-  maxRecoilX: 14
-  maxRecoilY: 7
-  recoilYawScale: 0.65
+  recoilAmount: 8.2
+  recoilSpeed: 1.6
+  recoilRiseTime: 0.09
+  maxRecoilX: 16
+  maxRecoilY: 8
+  recoilYawScale: 0.7
   firingRecoveryScale: 1
 --- !u!114 &984622899
 MonoBehaviour:
@@ -15279,11 +15288,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   weaponTransform: {fileID: 984622895}
-  recoilAmount: 0.42
-  recoilSpeed: 2.4
-  recoilFollowSpeed: 10
-  maxRecoil: 0.6
-  recoilKickEuler: {x: -16, y: 4, z: 10}
+  recoilAmount: 0.5
+  recoilSpeed: 2.2
+  recoilFollowSpeed: 9
+  maxRecoil: 0.7
+  recoilKickEuler: {x: -18, y: 5, z: 12}
+  walkBobAmount: 0.007
+  sprintBobAmount: 0.012
+  walkBobSpeed: 9
+  sprintBobSpeed: 13
 --- !u!114 &984622900
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15303,6 +15316,7 @@ MonoBehaviour:
   fireState: Fire
   reloadState: Reload_Empty
   reloadTacState: Reload_Tac
+  sprintState: Sprint
 --- !u!82 &984622901
 AudioSource:
   m_ObjectHideFlags: 0
@@ -28836,15 +28850,20 @@ MonoBehaviour:
   defaultPoolSize: 8
   waveNumber: 1
   waveText: {fileID: 2140539947}
-  waveDelay: 5
-  waveClearBannerDuration: 1.8
-  waveStartBannerDuration: 1.6
+  waveDelay: 1.2
+  waveClearBannerDuration: 1.4
+  waveStartBannerDuration: 1.2
+  waveClearPause: 0.4
+  nextWaveReadyDelay: 1
+  bossWarningDuration: 1.2
   waveBannerFontSize: 88
   waveBannerPunchScale: 1.12
   waveClearFormat: WAVE {0} CLEAR
   waveStartFormat: WAVE {0}
   bossWarningText: WARNING
   bossWaveStartText: BOSS WAVE
+  bossEnragedText: ENRAGED
+  bossEnragedBannerDuration: 1
   missionClearText: MISSION CLEAR
   waveBannerColor: {r: 1, g: 1, b: 1, a: 1}
   bossBannerColor: {r: 1, g: 0.28, b: 0.22, a: 1}
@@ -28896,11 +28915,18 @@ MonoBehaviour:
   bloodSpawnOffset: 0.1
   hitSound: {fileID: 8300000, guid: a9646a6173bb6ad4b951ea60adaaa407, type: 3}
   deathSound: {fileID: 8300000, guid: 756c4e23e8553954fa91b4cc2936afa0, type: 3}
-  hitSoundVolume: 0.2
-  deathSoundVolume: 0.28
-  hitFlashColor: {r: 0.55, g: 0.08, b: 0.08, a: 1}
-  hitFlashDuration: 0.08
-  hitStunDuration: 0.08
+  killSound: {fileID: 8300000, guid: 4031e628cfc564d93ac39f8955afbbda, type: 3}
+  uiSound: {fileID: 8300000, guid: 9158afb6966d445db9caf1dccf7acbcc, type: 3}
+  hitSoundVolume: 0.22
+  deathSoundVolume: 0.4
+  killSoundVolume: 0.28
+  uiSoundVolume: 0.32
+  hitFlashColor: {r: 0.72, g: 0.1, b: 0.08, a: 1}
+  hitFlashDuration: 0.12
+  hitStunDuration: 0.11
+  hitMarkerColor: {r: 1, g: 1, b: 1, a: 1}
+  killMarkerColor: {r: 1, g: 0.82, b: 0.22, a: 1}
+  hitMarkerDuration: 0.09
 --- !u!114 &1932853652
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -58,6 +58,7 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] float enrageFlashDuration = 0.45f;
 
     public event System.Action OnDeath;
+    public event System.Action OnEnraged;
     public event System.Action<int, int> OnHealthChanged;
 
     public int MaxHealth => maxHealth;
@@ -315,7 +316,7 @@ public class EnemyAI : MonoBehaviour
 
     IEnumerator ReturnToPoolAfterDeath()
     {
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(3.2f);
         ResetCombatState();
 
         if (poolManager != null)
@@ -492,6 +493,7 @@ public class EnemyAI : MonoBehaviour
             animator.speed = enrageAnimatorSpeed;
 
         PlayHitFlash(enrageFlashColor, enrageFlashDuration);
+        OnEnraged?.Invoke();
     }
 
     void DropItem()

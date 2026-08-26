@@ -24,7 +24,7 @@ public class GunController : MonoBehaviour
         if (playerHealth != null && playerHealth.isPlayerDie)
             return;
 
-        if (WaveRewardUI.IsOpen)
+        if (MenuManager.IsInputBlocked || WaveRewardUI.IsOpen)
             return;
 
         if (Input.GetKeyDown(KeyCode.Alpha1))

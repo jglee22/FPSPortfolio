@@ -13205,7 +13205,7 @@ MonoBehaviour:
   throwPoint: {fileID: 2033862220}
   throwForce: 20
   grenadeCountText: {fileID: 424557222}
-  maxGrenadeCount: 3
+  startingGrenadeCount: 3
   currentGrenadeCount: 0
   throwCooldown: 1
 --- !u!4 &867352512 stripped

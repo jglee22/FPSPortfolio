@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 using TMPro;
 
 public class GrenadeThrower : MonoBehaviour
@@ -10,7 +11,8 @@ public class GrenadeThrower : MonoBehaviour
 
     public TextMeshProUGUI grenadeCountText;
 
-    public int maxGrenadeCount = 3;
+    [FormerlySerializedAs("maxGrenadeCount")]
+    public int startingGrenadeCount = 3;
     public int currentGrenadeCount;
     public float throwCooldown = 1f;
     private bool isCooldown = false;
@@ -19,8 +21,8 @@ public class GrenadeThrower : MonoBehaviour
     private void Start()
     {
         playerHealth = FindObjectOfType<PlayerHealth>();
-        currentGrenadeCount = maxGrenadeCount;
-        grenadeCountText.text = " x " + maxGrenadeCount.ToString();
+        currentGrenadeCount = startingGrenadeCount;
+        grenadeCountText.text = " x " + currentGrenadeCount.ToString();
     }
 
     void Update()

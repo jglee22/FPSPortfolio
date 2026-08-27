@@ -6,21 +6,21 @@ using UnityEngine.Rendering.Universal;
 using TMPro;
 public class PlayerHealth : MonoBehaviour
 {
-    public int maxHealth = 100;      // 최대 체력
-    public int currentHealth;       // 현재 체력
-    public HealthBar healthBar;     // 체력 바 (UI 표시)
-    public TextMeshProUGUI healthText; //체력 수치
+    public int maxHealth = 100;      // ??? ???
+    public int currentHealth;       // ???? ???
+    public HealthBar healthBar;     // ??? ?? (UI ???)
+    public TextMeshProUGUI healthText; //??? ???
     public bool isPlayerDie = false;
 
     CameraShake cameraShake;
-    public float duration, magnitude;   // 피격시 화면 진동 효과 지속시간,강도
+    public float duration, magnitude;   // ???? ??? ???? ??? ????ð?,????
 
-    public DamageOverlay damageOverlay; //피격시 화면 붉게 보이게 하는 효과
+    public DamageOverlay damageOverlay; //???? ??? ??? ????? ??? ???
 
     void Start()
     {
-        currentHealth = maxHealth;   // 시작 시 최대 체력으로 설정
-        healthBar.SetMaxHealth(maxHealth); // 체력바 초기화
+        currentHealth = maxHealth;   // ???? ?? ??? ??????? ????
+        healthBar.SetMaxHealth(maxHealth); // ??¹? ????
         cameraShake = Camera.main.GetComponent<CameraShake>();
         healthText.text = currentHealth + " / " + maxHealth;
     }
@@ -34,13 +34,9 @@ public class PlayerHealth : MonoBehaviour
 
         cameraShake.Shake(duration, magnitude);
 
-        currentHealth -= damage;
+        currentHealth = Mathf.Max(0, currentHealth - damage);
         healthBar.SetHealth(currentHealth);
-        
         healthText.text = currentHealth + " / " + maxHealth;
-
-        if (currentHealth < 0)
-            healthText.text = 0 + " / " + maxHealth;
 
         if (currentHealth <= 0)
         {
@@ -56,6 +52,11 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
         healthBar.SetHealth(currentHealth);
         healthText.text = currentHealth + " / " + maxHealth;
+    }
+
+    public bool NeedsHealth()
+    {
+        return currentHealth < maxHealth;
     }
 
     void Die()

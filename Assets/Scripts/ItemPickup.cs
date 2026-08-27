@@ -73,6 +73,9 @@ public class ItemPickup : MonoBehaviour
         if (consumableItem == null)
             return;
 
+        if (!consumableItem.CanApply(other.gameObject))
+            return;
+
         collected = true;
         Collider pickupCollider = GetComponent<Collider>();
         if (pickupCollider != null)

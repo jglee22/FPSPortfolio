@@ -660,6 +660,11 @@ public class Gun : MonoBehaviour
         UpdateUI();
     }
 
+    public bool NeedsAmmo()
+    {
+        return currentAmmo < maxAmmo;
+    }
+
     public void RestoreAmmo()
     {
         if (isReloading)

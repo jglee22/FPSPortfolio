@@ -14,6 +14,26 @@ public class ConsumableItem : ScriptableObject
     public ConsumableType type;
     public int amount;
 
+    public bool CanApply(GameObject player)
+    {
+        if (player == null)
+            return false;
+
+        switch (type)
+        {
+            case ConsumableType.Ammo:
+                Gun gun = GetCurrentGun(player);
+                return gun != null && gun.NeedsAmmo();
+            case ConsumableType.Health:
+                PlayerHealth playerHealth = player.GetComponentInParent<PlayerHealth>();
+                return playerHealth != null && playerHealth.NeedsHealth();
+            case ConsumableType.Grenade:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public void Apply(GameObject player)
     {
         if (player == null)
@@ -35,13 +55,18 @@ public class ConsumableItem : ScriptableObject
 
     void ApplyAmmo(GameObject player)
     {
-        GunController gunController = player.GetComponentInParent<GunController>();
-        if (gunController == null)
-            return;
-
-        Gun gun = gunController.GetCurrentGun();
+        Gun gun = GetCurrentGun(player);
         if (gun != null)
             gun.RestoreAmmo();
+    }
+
+    Gun GetCurrentGun(GameObject player)
+    {
+        GunController gunController = player.GetComponentInParent<GunController>();
+        if (gunController == null)
+            return null;
+
+        return gunController.GetCurrentGun();
     }
 
     void ApplyHealth(GameObject player)

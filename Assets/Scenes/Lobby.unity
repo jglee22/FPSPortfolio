@@ -781,6 +781,14 @@ MonoBehaviour:
   loadingPanel: {fileID: 1326126601}
   loadingImage: {fileID: 1345250128}
   startButton: {fileID: 396745128}
+  lobbyTitle: WAVEBREAK
+  playButtonLabel: PLAY
+  highScoreLabel: "\uCD5C\uACE0 \uC810\uC218"
+  bestComboLabel: "\uCD5C\uACE0 \uCF64\uBCF4"
+  bestClearLabel: "\uCD5C\uB2E8 \uD074\uB9AC\uC5B4"
+  mainSceneName: Main
+  playButtonSize: {x: 360, y: 96}
+  playButtonPosition: {x: 0, y: -130}
 --- !u!4 &1657331009
 Transform:
   m_ObjectHideFlags: 0

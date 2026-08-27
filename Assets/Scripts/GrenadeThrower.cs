@@ -59,7 +59,7 @@ public class GrenadeThrower : MonoBehaviour
         if (amount <= 0)
             return;
 
-        currentGrenadeCount = Mathf.Min(maxGrenadeCount, currentGrenadeCount + amount);
+        currentGrenadeCount += amount;
         if (grenadeCountText != null)
             grenadeCountText.text = " x " + currentGrenadeCount.ToString();
     }

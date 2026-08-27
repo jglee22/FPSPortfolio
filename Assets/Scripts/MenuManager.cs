@@ -21,11 +21,13 @@ public class MenuManager : MonoBehaviour
     public string retryButtonLabel = "다시 시작";
     public string lobbyButtonLabel = "로비 이동";
     public string newBestLabel = "신기록";
-    public string currentScoreFormat = "현재 점수 : {0}";
-    public string highScoreFormat = "최고 점수 : {0}";
-    public string comboRecordFormat = "최고 콤보 : {0}  /  기록 {1}";
-    public string clearTimeFormat = "클리어 : {0}  /  최단 클리어 : {1}";
-    public string surviveTimeFormat = "생존 시간 : {0}";
+    public string currentScoreLabel = "현재 점수";
+    public string highScoreLabel = "최고 점수";
+    public string comboThisRunLabel = "이번 콤보";
+    public string comboBestLabel = "최고 콤보";
+    public string clearTimeLabel = "클리어 시간";
+    public string bestClearLabel = "최단 클리어";
+    public string surviveTimeLabel = "생존 시간";
 
     bool isPaused;
     bool isGameOver;
@@ -33,11 +35,20 @@ public class MenuManager : MonoBehaviour
     static MenuManager instance;
     GameObject gameOverPanel;
     TextMeshProUGUI resultTitleText;
-    TextMeshProUGUI gameOverScoreText;
-    TextMeshProUGUI gameOverHighScoreText;
-    TextMeshProUGUI gameOverComboText;
-    TextMeshProUGUI gameOverTimeText;
     TextMeshProUGUI newBestText;
+    ResultStatRow scoreRow;
+    ResultStatRow highScoreRow;
+    ResultStatRow comboRow;
+    ResultStatRow bestComboRow;
+    ResultStatRow timeRow;
+    ResultStatRow bestTimeRow;
+
+    class ResultStatRow
+    {
+        public GameObject root;
+        public TextMeshProUGUI label;
+        public TextMeshProUGUI value;
+    }
 
     public static bool IsInputBlocked
     {
@@ -225,22 +236,38 @@ public class MenuManager : MonoBehaviour
             isNewBest = ScoreManager.Instance.HasAnyNewRecord;
         }
 
-        if (gameOverScoreText != null)
-            gameOverScoreText.text = string.Format(currentScoreFormat, score);
-        if (gameOverHighScoreText != null)
-            gameOverHighScoreText.text = string.Format(highScoreFormat, highScore);
-        if (gameOverComboText != null)
-            gameOverComboText.text = string.Format(comboRecordFormat, combo, bestCombo);
-        if (gameOverTimeText != null)
+        SetStatRow(scoreRow, currentScoreLabel, score.ToString());
+        SetStatRow(highScoreRow, highScoreLabel, highScore.ToString());
+        SetStatRow(comboRow, comboThisRunLabel, combo.ToString());
+        SetStatRow(bestComboRow, comboBestLabel, bestCombo.ToString());
+
+        string timeText = ScoreSave.FormatTime(runTime);
+        if (missionCleared)
         {
-            string timeText = ScoreSave.FormatTime(runTime);
-            if (missionCleared)
-                gameOverTimeText.text = string.Format(clearTimeFormat, timeText, ScoreSave.FormatClearRecord(bestClearTime));
-            else
-                gameOverTimeText.text = string.Format(surviveTimeFormat, timeText);
+            SetStatRow(timeRow, clearTimeLabel, timeText);
+            if (bestTimeRow != null && bestTimeRow.root != null)
+                bestTimeRow.root.SetActive(true);
+            SetStatRow(bestTimeRow, bestClearLabel, ScoreSave.FormatClearRecord(bestClearTime));
         }
+        else
+        {
+            SetStatRow(timeRow, surviveTimeLabel, timeText);
+            if (bestTimeRow != null && bestTimeRow.root != null)
+                bestTimeRow.root.SetActive(false);
+        }
+
         if (newBestText != null)
             newBestText.gameObject.SetActive(isNewBest);
+    }
+
+    void SetStatRow(ResultStatRow row, string label, string value)
+    {
+        if (row == null)
+            return;
+        if (row.label != null)
+            row.label.text = label;
+        if (row.value != null)
+            row.value.text = value;
     }
 
     void CreateGameOverPanel()
@@ -256,20 +283,55 @@ public class MenuManager : MonoBehaviour
         overlay.raycastTarget = true;
         gameOverPanel.SetActive(false);
 
-        resultTitleText = CreateLabel("Title", gameOverPanel.transform, gameOverTitle, 92f, new Vector2(0f, 240f), new Vector2(900f, 120f));
-        gameOverScoreText = CreateLabel("Score", gameOverPanel.transform, string.Format(currentScoreFormat, 0), 42f, new Vector2(0f, 110f), new Vector2(800f, 60f));
-        gameOverHighScoreText = CreateLabel("HighScore", gameOverPanel.transform, string.Format(highScoreFormat, 0), 32f, new Vector2(0f, 58f), new Vector2(800f, 44f));
-        gameOverComboText = CreateLabel("Combo", gameOverPanel.transform, string.Format(comboRecordFormat, 0, 0), 32f, new Vector2(0f, 14f), new Vector2(800f, 44f));
-        gameOverTimeText = CreateLabel("Time", gameOverPanel.transform, string.Format(surviveTimeFormat, "-"), 32f, new Vector2(0f, -30f), new Vector2(800f, 44f));
-        newBestText = CreateLabel("NewBest", gameOverPanel.transform, newBestLabel, 32f, new Vector2(0f, -78f), new Vector2(400f, 40f));
+        resultTitleText = CreateLabel("Title", gameOverPanel.transform, gameOverTitle, 88f, new Vector2(0f, 278f), new Vector2(900f, 110f));
+        resultTitleText.characterSpacing = 2f;
+
+        newBestText = CreateLabel("NewBest", gameOverPanel.transform, newBestLabel, 28f, new Vector2(0f, 204f), new Vector2(400f, 36f));
         newBestText.color = new Color(1f, 0.78f, 0.25f, 1f);
+        newBestText.characterSpacing = 4f;
         newBestText.gameObject.SetActive(false);
 
-        Button retry = CreateMenuButton("RetryButton", gameOverPanel.transform, retryButtonLabel, new Vector2(0f, -175f));
+        const float rowY = 132f;
+        const float rowGap = 44f;
+        scoreRow = CreateStatRow("Score", gameOverPanel.transform, new Vector2(0f, rowY));
+        highScoreRow = CreateStatRow("HighScore", gameOverPanel.transform, new Vector2(0f, rowY - rowGap));
+        comboRow = CreateStatRow("Combo", gameOverPanel.transform, new Vector2(0f, rowY - rowGap * 2f));
+        bestComboRow = CreateStatRow("BestCombo", gameOverPanel.transform, new Vector2(0f, rowY - rowGap * 3f));
+        timeRow = CreateStatRow("Time", gameOverPanel.transform, new Vector2(0f, rowY - rowGap * 4f));
+        bestTimeRow = CreateStatRow("BestTime", gameOverPanel.transform, new Vector2(0f, rowY - rowGap * 5f));
+
+        Button retry = CreateMenuButton("RetryButton", gameOverPanel.transform, retryButtonLabel, new Vector2(0f, -186f));
         retry.onClick.AddListener(RetryGame);
 
-        Button lobby = CreateMenuButton("LobbyButton", gameOverPanel.transform, lobbyButtonLabel, new Vector2(0f, -280f));
+        Button lobby = CreateMenuButton("LobbyButton", gameOverPanel.transform, lobbyButtonLabel, new Vector2(0f, -286f));
         lobby.onClick.AddListener(GoToLobby);
+    }
+
+    ResultStatRow CreateStatRow(string name, Transform parent, Vector2 position)
+    {
+        GameObject rowObject = CreateUiObject(name, parent);
+        RectTransform rowRect = rowObject.GetComponent<RectTransform>();
+        rowRect.anchorMin = new Vector2(0.5f, 0.5f);
+        rowRect.anchorMax = new Vector2(0.5f, 0.5f);
+        rowRect.pivot = new Vector2(0.5f, 0.5f);
+        rowRect.anchoredPosition = position;
+        rowRect.sizeDelta = new Vector2(520f, 40f);
+
+        TextMeshProUGUI label = CreateLabel("Label", rowObject.transform, string.Empty, 32f, Vector2.zero, Vector2.zero);
+        StretchFull(label.rectTransform);
+        label.alignment = TextAlignmentOptions.MidlineLeft;
+        label.color = new Color(0.72f, 0.72f, 0.72f, 1f);
+
+        TextMeshProUGUI value = CreateLabel("Value", rowObject.transform, string.Empty, 32f, Vector2.zero, Vector2.zero);
+        StretchFull(value.rectTransform);
+        value.alignment = TextAlignmentOptions.MidlineRight;
+        value.color = Color.white;
+
+        ResultStatRow row = new ResultStatRow();
+        row.root = rowObject;
+        row.label = label;
+        row.value = value;
+        return row;
     }
 
     TextMeshProUGUI CreateLabel(string name, Transform parent, string text, float fontSize, Vector2 position, Vector2 size)

@@ -127,10 +127,16 @@ public class Gun : MonoBehaviour
             return;
         }
 
-        if (WaveRewardUI.IsOpen || MenuManager.IsInputBlocked)
+        if (WaveRewardUI.IsOpen)
         {
             if (isReloading)
-                CancelReload();
+                CompleteReloadNow();
+            SetRecoilFiring(false);
+            return;
+        }
+
+        if (MenuManager.IsInputBlocked)
+        {
             SetRecoilFiring(false);
             return;
         }
@@ -214,6 +220,9 @@ public class Gun : MonoBehaviour
 
     void Shoot()
     {
+        if (isReloading || currentAmmo <= 0)
+            return;
+
         ApplyRecoil();
 
         if (viewModel != null)
@@ -373,7 +382,10 @@ public class Gun : MonoBehaviour
             PlayReloadMotion();
 
         if (gunAudioSource != null && reloadSound != null)
-            gunAudioSource.PlayOneShot(reloadSound);
+        {
+            gunAudioSource.clip = reloadSound;
+            gunAudioSource.Play();
+        }
 
         float elapsed = 0f;
         while (isReloading && elapsed < wait)
@@ -399,6 +411,17 @@ public class Gun : MonoBehaviour
         if (viewModel != null)
             viewModel.PlayIdle();
         UpdateUI();
+    }
+
+    void CompleteReloadNow()
+    {
+        if (!isReloading)
+            return;
+
+        StopReloadSound();
+        if (reloadTween != null && reloadTween.IsActive())
+            reloadTween.Kill();
+        ReloadComplete();
     }
 
     bool ShouldUseTacticalReload()
@@ -637,14 +660,12 @@ public class Gun : MonoBehaviour
         UpdateUI();
     }
 
-    public void RestoreAmmo(int amount)
+    public void RestoreAmmo()
     {
-        if (amount <= 0)
-            return;
-
-        currentAmmo = Mathf.Min(maxAmmo, currentAmmo + amount);
         if (isReloading)
             CancelReload();
+
+        currentAmmo = maxAmmo;
         UpdateUI();
     }
 

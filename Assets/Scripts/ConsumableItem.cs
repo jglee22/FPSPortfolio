@@ -41,7 +41,7 @@ public class ConsumableItem : ScriptableObject
 
         Gun gun = gunController.GetCurrentGun();
         if (gun != null)
-            gun.RestoreAmmo(amount);
+            gun.RestoreAmmo();
     }
 
     void ApplyHealth(GameObject player)

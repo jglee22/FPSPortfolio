@@ -1,26 +1,23 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using TMPro;
+
 public class PlayerHealth : MonoBehaviour
 {
-    public int maxHealth = 100;      // ??? ???
-    public int currentHealth;       // ???? ???
-    public HealthBar healthBar;     // ??? ?? (UI ???)
-    public TextMeshProUGUI healthText; //??? ???
+    public int maxHealth = 100;
+    public int currentHealth;
+    public HealthBar healthBar;
+    public TextMeshProUGUI healthText;
     public bool isPlayerDie = false;
 
     CameraShake cameraShake;
-    public float duration, magnitude;   // ???? ??? ???? ??? ????©£?,????
+    public float duration, magnitude;
 
-    public DamageOverlay damageOverlay; //???? ??? ??? ????? ??? ???
+    public DamageOverlay damageOverlay;
 
     void Start()
     {
-        currentHealth = maxHealth;   // ???? ?? ??? ??????? ????
-        healthBar.SetMaxHealth(maxHealth); // ??©ö? ????
+        currentHealth = maxHealth;
+        healthBar.SetMaxHealth(maxHealth);
         cameraShake = Camera.main.GetComponent<CameraShake>();
         healthText.text = currentHealth + " / " + maxHealth;
     }

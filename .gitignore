@@ -54,6 +54,8 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+/Wavebreak/
+/WAVEBREAK/
 
 # Crashlytics generated file
 crashlytics-build.properties

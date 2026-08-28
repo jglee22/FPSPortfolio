@@ -108,6 +108,9 @@ public class EnemyPoolManager : MonoBehaviour
         int clearedWave = waveNumber;
         bool isLastWave = waveIndex >= waves.Length - 1;
 
+        if (isLastWave && ScoreManager.Instance != null)
+            ScoreManager.Instance.StopRun(true);
+
         yield return WaitUnlessDead(waveClearPause);
         if (IsPlayerDead())
         {

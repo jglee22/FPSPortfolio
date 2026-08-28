@@ -68,3 +68,6 @@ crashlytics-build.properties
 /Assets/KINEMATION/
 /Assets/KINEMATION.meta
 
+# Local recordings (mp4 is too large for GitHub)
+/Recordings/*.mp4
+

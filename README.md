@@ -37,7 +37,14 @@ KINEMATION은 1인칭 팔/총 애니메이션 클립과 Animator Override만 사
 
 ## 플레이 영상 / 스크린샷
 
-- 추가 예정
+[WAVEBREAK 플레이 영상](https://youtu.be/NnLwGkDbO04)
+
+![로비](Recordings/01_Lobby.png)
+![콤보 전투](Recordings/02_Combat_Combo.png)
+![웨이브 강화 선택](Recordings/03_Reward_Select.png)
+![4웨이브 전투](Recordings/04_Wave4_Combat.png)
+![보스 엔레이지](Recordings/05_Boss_Enraged.png)
+![Mission Clear](Recordings/06_Mission_Clear_Result.png)
 
 ## 문제 해결 사례
 

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyName: BossEnemy_1
   prefab: {fileID: 1352753540370996, guid: 43b3bfc3c2f2ff146a8d85e63d0a4e26, type: 3}
-  maxHealth: 100
+  maxHealth: 250
   attackDamage: 20
   moveSpeed: 5
   isBoss: 1

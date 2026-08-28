@@ -38,6 +38,9 @@ public class GunController : MonoBehaviour
         if (index < 0 || index >= guns.Count)
             return;
 
+        if (currentGun != null && currentGunIndex == index && currentGun.gameObject.activeSelf)
+            return;
+
         if (currentGun != null)
         {
             if (currentGun.gunType == GunType.Shotgun)
@@ -50,6 +53,7 @@ public class GunController : MonoBehaviour
         currentGunIndex = index;
         currentGun = guns[currentGunIndex];
         currentGun.gameObject.SetActive(true);
+        currentGun.NotifyEquipped();
         currentGun.UpdateUI();
 
         GunRecoil gunRecoil = currentGun.GetComponent<GunRecoil>();

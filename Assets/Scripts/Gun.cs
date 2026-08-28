@@ -94,20 +94,24 @@ public class Gun : MonoBehaviour
     private ParticleSystem muzzleFlashInstance;
     public float recoilSpread = 10f;
 
+    private int equippedFrame = -1;
+
     void Awake()
     {
         viewModel = GetComponent<FPSViewModel>();
+        if (currentAmmo <= 0)
+            currentAmmo = maxAmmo;
     }
 
     void OnEnable()
     {
+        equippedFrame = Time.frameCount;
         if (viewModel != null)
-            viewModel.Build();
+            viewModel.Equip();
     }
 
     void Start()
     {
-        currentAmmo = maxAmmo;
         playerHealth = FindObjectOfType<PlayerHealth>();
         playerMovement = FindObjectOfType<PlayerMovement>();
         gunRecoil = GetComponent<GunRecoil>();
@@ -157,7 +161,10 @@ public class Gun : MonoBehaviour
         if (!IsPointerOverUI() && Input.GetMouseButtonDown(0) && currentAmmo <= 0)
             PlayEmptyClick();
 
-        if ((Input.GetKeyDown(KeyCode.R) || currentAmmo <= 0) && currentAmmo < maxAmmo && reloadRoutine == null)
+        if ((Input.GetKeyDown(KeyCode.R) || currentAmmo <= 0)
+            && currentAmmo < maxAmmo
+            && reloadRoutine == null
+            && Time.frameCount != equippedFrame)
         {
             reloadRoutine = StartCoroutine(Reload());
             return;
@@ -594,6 +601,14 @@ public class Gun : MonoBehaviour
         if (weaponRecoil != null && weaponRecoil.weaponTransform != null)
             return weaponRecoil.weaponTransform;
         return transform;
+    }
+
+    public void NotifyEquipped()
+    {
+        equippedFrame = Time.frameCount;
+        if (viewModel != null)
+            viewModel.Equip();
+        UpdateUI();
     }
 
     public void CancelReload()
